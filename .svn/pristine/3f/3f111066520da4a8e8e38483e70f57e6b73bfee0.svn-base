@@ -1,0 +1,29 @@
+import { DragStartData } from './DragStartData';
+import { TheadContainer } from '../viewModule/container/TheadContainer';
+export enum ContainerBearing {
+    TOP = 'top',
+    RIGHT = 'right',
+    BOTTOM = 'bottom',
+    LEFT = 'left',
+    INNER = 'inner',
+    OTHER = 'other',
+}
+export interface DragTransferDataInterface {
+    theadType: string;
+    target: TheadContainer;
+    targetBearing: ContainerBearing;
+    source: DragStartData;
+}
+
+export class DragTsData implements DragTransferDataInterface {
+    public theadType: string;
+    public target: TheadContainer;
+    public targetBearing: ContainerBearing;
+    public source: DragStartData;
+    constructor(theadType: string, target: TheadContainer, targetBearing: ContainerBearing, source: DragStartData) {
+        this.theadType = theadType;
+        this.target = target;
+        this.targetBearing = targetBearing;
+        this.source = source;
+    }
+}

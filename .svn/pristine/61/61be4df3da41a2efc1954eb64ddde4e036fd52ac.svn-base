@@ -1,0 +1,143 @@
+<template>
+  <div class="about">
+    <div
+      class="markdown"
+      v-html="compiledMarkdown"
+    ></div>
+    <h2>效果如下:</h2>
+    <ul>
+      <li
+        v-for="(value, key) in param"
+        :key="key"
+      >
+        <div style="width:120px; float:left;">{{key}}</div>:
+        <input v-model="param[key]" />
+      </li>
+    </ul>
+    <button @click="addThead({
+      bgc:param.bgc,
+      type:'top',
+      bgcWeight:param.bgcWeight,
+      renderByThead:param.renderByThead
+    })">添加上表头</button>
+    <button @click="addThead({
+      bgc:param.bgc,
+      type:'left',
+      bgcWeight:param.bgcWeight,
+      renderByThead:param.renderByThead
+    })">添加左表头</button>
+    <span
+      style="cursor: pointer;"
+      draggable="true"
+      @dragstart="dragStart($event,{title:'select',id:'cssj'})"
+    > 拖拽我进来可以添加一列下拉输入 </span>
+    <TableCom :inputTable="table"></TableCom>
+  </div>
+</template>
+
+<script lang='ts'>
+  import { Component, Vue } from "vue-property-decorator";
+  import {
+    TableCom, // 单表单vue组件
+    TableListCom, // 多表单vue组件
+    BaseTable, // BaseTable实体类
+    BaseTableList, // BaseTableList实体类
+    ParamTheadAdd,
+    DragTransferDataInterface,
+    DragStartDataInterface
+  } from "../../packages/drag-table2.0/index";
+
+  export default Vue.extend({
+    components: {
+      TableCom
+    },
+    data() {
+      return {
+        param: {
+          bgc: "red",
+          bgcWeight: 100
+        },
+        compiledMarkdown: "",
+        table: new BaseTable("table")
+      };
+    },
+    methods: {
+      addThead: function(param: any) {
+        const table: BaseTable = this.table;
+        const thead: ParamTheadAdd = {
+          type: param.type,
+          sourceContainerData: {
+            cell: {
+              value:
+                param.type.substring(0, 1) +
+                "-" +
+                param.bgc.substring(0, 1) +
+                "-" +
+                param.bgcWeight
+            },
+            tbodyConfig: {
+              weight: {
+                style: {
+                  backgroundColor: param.bgcWeight
+                }
+              },
+              container: {
+                style: {
+                  backgroundColor: param.bgc
+                },
+                renderByThead: param.renderByThead
+              }
+            }
+          } as any,
+          targetParentPosition: []
+        };
+        table.theadAdd(thead);
+        table.render();
+      },
+      dragStart(ev: any, item: any) {
+        const dragStartData: DragStartDataInterface = {
+          operationType: "add",
+          containerData: {
+            cell: {
+              value: item.title + new Date().getMilliseconds()
+            },
+            tbodyConfig: {
+              weight: {},
+              container: {
+                cell: {
+                  value: "双击我",
+                  displayClass: {
+                    dbclick: {
+                      displayType: "select",
+                      select: {
+                        optionList: [
+                          {
+                            value: "测试",
+                            text: 1111
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+
+            canSum: item.canSum,
+            id: item.id + new Date().getMilliseconds()
+          }
+        };
+        console.log(dragStartData);
+        ev.dataTransfer.setData("dragStartData", JSON.stringify(dragStartData));
+      }
+    },
+    mounted() {
+      const table: BaseTable = this.table;
+      // debugger
+    }
+  });
+</script>
+
+<style>
+</style>
+

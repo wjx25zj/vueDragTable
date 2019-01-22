@@ -1,0 +1,50 @@
+
+import * as _ from '../../utils';
+export class BaseCell {
+    public data: any[] = [];
+    public span1: number = 1; // 横表头 为colspan 纵表头为rowspan
+    public span2: number = 1; // 横表头 为rowspan 纵表头为colspan
+    public style = {
+        fontSize: 12,
+        color: '#000',
+        textAlign: 'center',
+        width: '100px',
+        // display: 'block',
+    };
+    public content: any; // 内容
+
+    public config = {
+        span1: 1,
+        span2: 1,
+        baseWidth: 100,
+    }
+    constructor(content: any, span1?: number, span2?: number) {
+        this.content = content || '';
+        this.span1 = span1 == null ? this.config.span1 : span1;
+        this.span2 = span2 == null ? this.config.span2 : span2;
+    }
+    /**
+     * setData
+     */
+    public setData(data: any) {
+        this.data.push(data || {});
+    }
+
+    public setCellData(cellData: BaseCell) {
+        for (const key in cellData) {
+            if (cellData.hasOwnProperty(key)) {
+                this.setProperty(key, (cellData as any)[key]);
+            }
+        }
+    }
+
+    public setProperty(key: string, val: any) {
+        (this as any)[key] = val;
+    }
+
+    public clone() {
+        return _.clone(this);
+    }
+    
+}
+

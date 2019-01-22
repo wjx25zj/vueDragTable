@@ -1,0 +1,6 @@
+import { TheadContainer } from './TheadContainer';
+
+export class IndexContainer extends TheadContainer {
+    public canDragResize: boolean = false;
+}
+

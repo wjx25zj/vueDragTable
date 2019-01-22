@@ -1,0 +1,12 @@
+import TableCom from './views/TableCom.vue';
+import TableListCom from './views/TableListCom.vue'
+import { BaseTable } from './viewModule/table/BaseTable';
+import { BaseTableList } from './viewModule/tableList/BaseTableList';
+export {
+    TableCom,
+    TableListCom,
+    BaseTable,
+    BaseTableList,
+}
+
+

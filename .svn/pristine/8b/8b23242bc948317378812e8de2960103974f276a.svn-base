@@ -1,0 +1,84 @@
+import { ContainerBearing } from '../../interface/DragTsData';
+
+export class BaseStyle {
+    public static addBackgroundColor(dom: any, color: string) {
+        dom.style['background-color'] = color;
+    }
+    public static removeBackgroundColor(dom: any) {
+        dom.style.removeProperty('background-color');
+
+    }
+    public static addBorder(dom: any, borderBearing: string, width?: number, borderColor?: string) {
+        let style = 'solid ';
+        if (width) {
+            style += width + 'px ';
+        }
+        if (borderColor) {
+            style += borderColor + ' ';
+        }
+        dom.style['border-' + borderBearing] = style;
+    }
+    public static removeBorder(dom: any) {
+        dom.style.removeProperty('border-left');
+        dom.style.removeProperty('border-right');
+        dom.style.removeProperty('border-top');
+        dom.style.removeProperty('border-bottom');
+    }
+
+    public static getParentTHTD(targetDom: any) {
+        if (targetDom.parentElement && targetDom.tagName === 'DIV') {
+            if (targetDom.parentElement.tagName === 'TH' || targetDom.parentElement.tagName === 'TD') {
+                targetDom = targetDom.parentElement;
+            }
+        }
+        return targetDom;
+    }
+
+    public static checkBearing(ev: any) {
+        let res = ContainerBearing.INNER;
+        if (ev.currentTarget) {
+            const dragoverTarget = ev.currentTarget;
+            // const X1of4 = this.getOffsetLeftByBody(dragoverTarget) + dragoverTarget.offsetWidth * 0.25;
+            // const X3of4 = this.getOffsetLeftByBody(dragoverTarget) + dragoverTarget.offsetWidth * 0.75;
+            // const Y1of4 = this.getOffsetTopByBody(dragoverTarget) + dragoverTarget.offsetHeight * 0.25;
+            // const Y3of4 = this.getOffsetTopByBody(dragoverTarget) + dragoverTarget.offsetHeight * 0.75;
+            const X1of4 = ev.target.offsetWidth * 0.25;
+            const X3of4 = ev.target.offsetWidth * 0.75;
+            const Y1of4 = ev.target.offsetHeight * 0.25;
+            const Y3of4 = ev.target.offsetHeight * 0.75;
+
+            if (ev.offsetY < Y1of4) {
+                res = ContainerBearing.TOP;
+            }
+            if (ev.offsetY > Y3of4) {
+                res = ContainerBearing.BOTTOM;
+            }
+            if (ev.offsetX < X1of4) {
+                res = ContainerBearing.LEFT;
+            }
+            if (ev.offsetX > X3of4) {
+                res = ContainerBearing.RIGHT;
+            }
+        }
+        return res;
+    }
+
+    public static getOffsetTopByBody(el: any) {
+        let offsetTop = 0;
+        while (el && el.tagName !== 'BODY') {
+            offsetTop += el.offsetTop;
+            el = el.offsetParent;
+        }
+        return offsetTop;
+    }
+
+    public static getOffsetLeftByBody(el: any) {
+        let offsetLeft = 0;
+        while (el && el.tagName !== 'BODY') {
+            offsetLeft += el.offsetLeft;
+            el = el.offsetParent;
+        }
+        return offsetLeft;
+    }
+
+}

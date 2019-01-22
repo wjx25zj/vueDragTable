@@ -1,0 +1,50 @@
+<template>
+  <div>
+    <MyTable
+      v-for="table in tableList.children"
+      :key="table.id"
+      :inputTable="table"
+    ></MyTable>
+  </div>
+</template>
+
+<script lang='ts'>
+  import { Component, Vue } from "vue-property-decorator";
+  import MyTableCom from "./TableCom.vue"; // @ is an alias to /src
+  import { BaseTable } from "../viewModule/table/BaseTable";
+  import { BaseTableList } from "../viewModule/tableList/BaseTableList";
+  import { DragStartDataInterface } from "../interface/DragStartData";
+  export default Vue.component("TableListCom", {
+    props: {
+      TableContanerCom: Object
+    },
+    components: {
+      MyTable: MyTableCom
+    },
+    data() {
+      return {
+        tableList: this.TableContanerCom || new BaseTableList('def')
+      };
+    },
+    methods: {
+    
+    }
+  });
+</script>
+
+<style>
+  .table-list-left-div {
+    position: relative;
+    width: 50%;
+    float: left;
+    /* margin: 0 auto; */
+  }
+
+  .table-list-right-div {
+    position: relative;
+    width: 50%;
+    float: left;
+    /* margin: 0 auto; */
+  }
+</style>
+

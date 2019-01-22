@@ -1,0 +1,4 @@
+export interface CellInterface {
+    content: any;
+    data: any;
+}

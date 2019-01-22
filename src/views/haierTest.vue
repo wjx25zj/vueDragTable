@@ -1,0 +1,907 @@
+<template>
+  <div class='about'>
+    <div style="display: inline-block;">
+      <ul
+        style="   float:left; display:block;width: 73%; overflow: hidden;  padding: 0;
+    margin: 0;"
+        v-if="tmpTHead"
+      >
+        <li
+          tabindex="1"
+          @click="onKeyClick(key,value)"
+          style="list-style: none;width:30%;float:left"
+          v-for="(value,key) in tmpTHead.cell"
+          :key='key'
+        >
+          {{key}}
+        </li>
+      </ul>
+      <textarea
+        style="float:left;width:25%;height:200px;"
+        v-model="tmpValue"
+      ></textarea>
+      <button
+        type="button"
+        @click="change()"
+      >change</button>
+    </div>
+    <div
+      @mousedown="rightClick($event)"
+      id="del-area"
+      style="position: relative;width:100%;height:50px;background-color:red"
+      @drop="tmpTable.dragDel($event)"
+      @dragover='tmpTable.dragOver($event)'
+    > </div>
+    <ul>
+      <li
+        v-for='item in list'
+        :key='item.title'
+        draggable='true'
+        v-on:dragstart='dragStart($event,item)'
+      >
+        {{item.title}}
+      </li>
+    </ul>
+    <button @click="addTable()">添加表区</button>
+
+    <!-- <h2 @dblclick="myTable.ondbClick(myTable)">
+      <div v-if="myTable.showType == 0">{{myTable.name}}
+      </div>
+      <div v-if="myTable.showType == 1">
+        <input @mouseover="myTable.getfocus($event)" 
+        @blur="myTable.inputOnBlur(myTable)" v-model="myTable.name" />
+      </div>
+    </h2> -->
+    <div style="width:100%">
+      <p> <button @click="addMKBM()">addMKBM</button>
+
+        <button @click="addZCLF()">addZCLF</button>
+        <button @click="clearTmpTHead()">清除TmpTHead</button>
+        <button @click="saveTable()">保存</button>
+        <button @click="addSum()">添加合计</button>
+        <button @click="addOneRowTbody()">添加一行空数据</button>
+        <button @click="addOneCol()">添加一列空数据</button>
+        <button @click="changeConatienrUserData()">改变Container里的UserData</button>
+        <button @click="changeThead()">改变1A1</button>
+        <button @click="changeTbody()">改变1A2</button>
+
+        <button @click="exportTbodyData()">输出数据</button>
+        <button @click="addParent()">addParent</button>
+        <button @click="merge()">merge</button></p>
+      <p> <button @click="delOneRowCol('row')">删除一行</button>
+        <button @click="delOneRowCol('col')">删除一列</button></p>
+      <button @click="delOne()">删除一个</button></p>
+
+      <div class="table-list-left-div">
+
+        <TableCom
+          v-for="table in tableList"
+          :key="table.id"
+          :inputTable="table"
+        ></TableCom>
+      </div>
+      <div class="table-list-right-div">
+        <TableCom
+          v-for="table in saveList"
+          :key="table.id"
+          :inputTable="table"
+        ></TableCom>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script lang='ts'>
+  import { Component, Vue } from "vue-property-decorator";
+  import {
+    TableCom,
+    BaseTable,
+    DragTransferDataInterface,
+    DragStartDataInterface
+  } from "../../packages/drag-table2.0/index";
+  import { DragTable } from "../../packages/drag-table2.0/DragTable";
+  import { TbodyContainerInterface } from "../../packages/drag-table2.0/interface/viewModule/container/TbodyContainer";
+  export default Vue.extend({
+    components: {
+      TableCom
+    },
+    data() {
+      return {
+        dragTable: new DragTable("haier"),
+        dragTable2: new DragTable("haier-save"),
+        a: 0,
+        tmpKey: "",
+        tmpValue: "",
+        tableCount: 0,
+        tmpTHead: null,
+        tmpTable: null,
+        tableList: [],
+        saveList: [],
+        list: [
+          { title: "物料号", id: "wlh", canSum: false },
+          { title: "单价", id: "dj", canSum: true },
+          { title: "地方" },
+          { title: "我的名字特别长" }
+        ]
+      };
+    },
+    methods: {
+      clearTmpTHead() {
+        this.tmpTHead = null;
+      },
+      delOneRowCol(type: "col" | "row") {
+        const table: BaseTable = this.tmpTable;
+        if (table && this.tmpTHead) {
+          table.delOneRowCol(type, this.tmpTHead);
+        }
+      },
+      rightClick(e) {
+        e.preventDefault();
+        const html = "<div>12321</div>";
+        const menu = document.createElement("div");
+        menu.setAttribute("tabIndex", "1");
+        menu.innerHTML = html;
+        // 根据事件对象中鼠标点击的位置，进行定位
+        menu.style.left = e.clientX + "px";
+        menu.style.top = e.clientY + "px";
+        // 改变自定义菜单的宽，让它显示出来
+        menu.style.width = "125px";
+        document.body.insertBefore;
+        menu.focus();
+      },
+      addSum() {
+        //  debugger;
+        if (this.tmpTable && this.tmpTHead) {
+          // this.tmpTable.addSum({
+          //   type: this.tmpTHead.type,
+          //   targetParentPosition: this.tmpTHead.theadPosition
+          // });
+          this.tmpTable.addSum();
+        }
+      },
+      onTableChange(msg: any) {
+        console.log(msg);
+        if (msg.data.objectName.indexOf("Container") !== -1) {
+          console.log(
+            msg.data.object.position.colStr + msg.data.object.position.rowStr
+          );
+        }
+
+        switch (msg.ev_type) {
+          case "click":
+            this.tmpTHead = msg.data.object;
+            this.tmpTable = this.tmpTHead.$rootTable;
+            break;
+          case "drop":
+            // debugger;
+            const tarnsformData: DragTransferDataInterface = msg.data.object;
+            // tarnsformData.operationType += '-replace';
+            // this.tmpTable = this.tmpTHead.$rootTable;
+            break;
+          case "rightClick":
+            this.tmpTHead = msg.data.object;
+            this.tmpTable = this.tmpTHead.$rootTable;
+            document.oncontextmenu = () => {
+              return false;
+            };
+            break;
+          case "change":
+            const rowStr = msg.data.object.$parent.position.rowStr;
+            const td: TbodyContainerInterface = this.tmpTable.getContainer({
+              table: 0,
+              rowStr,
+              colStr: "D"
+            });
+            td.renderByThead = false;
+            td.cell.value = "选中的是:" + msg.data.object.value;
+            this.tmpTable.render();
+            // debugger;
+            break;
+          default:
+        }
+      },
+      addbuttonClick(cell) {
+        const tmpTHead = cell.$parent;
+        const tmpTable = tmpTHead.$rootTable;
+        const parentPosition = tmpTHead.position.slice(
+          0,
+          tmpTHead.position.length - 1
+        );
+        const insertIndex = tmpTHead.position[tmpTHead.position.length - 1];
+        const newRow = {
+          cell: {
+            value: insertIndex + 1 + "、"
+          },
+          id: "row" + (insertIndex + 1)
+        };
+        tmpTable.theadAdd({
+          type: tmpTHead.type,
+          sourceContainerData: newRow,
+          targetParentPosition: parentPosition,
+          insertIndex
+        });
+        tmpTable.render();
+      },
+      saveTable() {
+        this.saveList = [];
+        this.tableList.forEach(table => {
+          let tmpSaveJson = table.serialize();
+          console.log(tmpSaveJson);
+          for (const key in tmpSaveJson) {
+            if (tmpSaveJson.hasOwnProperty(key)) {
+              JSON.stringify(tmpSaveJson[key]);
+              console.log(key);
+            }
+          }
+          tmpSaveJson = JSON.parse(JSON.stringify(tmpSaveJson));
+          const tmpTable: BaseTable = new BaseTable(tmpSaveJson.tableId, {
+            tableGroupId: "haier-save"
+          });
+
+          tmpTable.deserialize(tmpSaveJson);
+          tmpTable.setDefaultConfig({
+            topThead: {
+              readonly: true,
+              draggable: false
+            },
+            leftThead: {
+              readonly: true,
+              draggable: false
+            },
+            baseTbody: {
+              readonly: true
+            }
+          });
+
+          tmpTable.$subject.subscribe(this.onTableChange, this);
+          this.saveList.push(tmpTable);
+        });
+      },
+      changeThead() {
+        // debugger;
+        const table: BaseTable = this.tmpTable;
+        const container = table.getContainer({
+          table: 1,
+          colStr: "A",
+          rowStr: "1"
+        });
+        container.tbodyConfig = {
+          container: {
+            cell: {
+              displayClass: {
+                normal: {
+                  displayType: "input"
+                }
+              }
+            }
+          }
+        };
+        table.renderAll();
+      },
+      changeTbody() {
+        // debugger;
+        const table: BaseTable = this.tmpTable;
+        const container = table.getContainer({
+          table: 1,
+          colStr: "A",
+          rowStr: "2"
+        });
+        container.cell.displayClass.normal.displayType = "input";
+        container.renderByThead = false;
+        table.renderAll();
+      },
+      dragStart(ev: any, item: any) {
+        this.a++;
+        const DragTsDataInterface = {
+          operationType: "add",
+          containerData: {
+            cell: {
+              value: item.title + this.a,
+              data: item
+            },
+            canSum: item.canSum,
+            style: {
+              background: "#1fd8f4",
+              width: "150px",
+              height: this.a === 2 ? "50px" : undefined
+              // return :'none'
+            },
+            test: 111,
+            id: item.id + this.a
+          }
+        };
+        console.log(DragTsDataInterface);
+        ev.dataTransfer.setData(
+          "dragStartData",
+          JSON.stringify(DragTsDataInterface)
+        );
+      },
+      addTable() {
+        // debugger;
+        this.tableCount++;
+        const dragTable: DragTable = this.dragTable;
+
+        const tmpTable: BaseTable = dragTable.createTable({
+          id: "表" + this.tableCount,
+          config: {
+            isTopLeftShow: true,
+            // isShowColIndex: true, // 是否显示 列标识：A、B、D、C
+            // isShowRowIndex: true, // 是否显示 行标识：1、2、3、4
+            // hasTopFixedTable:false,
+            // isOverflow: true,
+            maxWidth: "1000px",
+            debugLevel: 0
+          }
+        });
+        // tmpTable.position.table = this.tableCount - 1;
+        tmpTable.$subject.subscribe(this.onTableChange, this);
+
+        const datawlh = {
+          cell: {
+            value: "物料号"
+          },
+          tbodyConfig: {
+            weight: {
+              cell: {
+                displayClass: {
+                  normal: 100,
+                  dbclick: 100
+                }
+              }
+            },
+            container: {
+              cell: {
+                displayClass: {
+                  normal: {
+                    displayType: "select",
+                    select: {
+                      optionList: [
+                        {
+                          text: "html2",
+                          value: "1"
+                        },
+                        {
+                          text: "js",
+                          value: "2"
+                        }
+                      ]
+                    }
+                  },
+                  dbclick: {
+                    displayType: "select",
+                    select: {
+                      optionList: [
+                        {
+                          text: "html2",
+                          value: "1"
+                        },
+                        {
+                          text: "js",
+                          value: "2"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          id: "wlh"
+        };
+        tmpTable.theadAdd({
+          type: "top",
+          sourceContainerData: datawlh,
+          targetParentPosition: []
+        });
+
+        const datawdj = {
+          cell: {
+            value: "单价"
+          },
+          // childrenShow: false,
+          canSum: true,
+
+          id: "dj"
+        };
+        tmpTable.theadAdd({
+          type: "top",
+          sourceContainerData: datawdj,
+          targetParentPosition: []
+        });
+        const datawdj2 = {
+          cell: {
+            value: "单价2"
+          },
+          // childrenShow: false,
+          canSum: true,
+
+          id: "dj2"
+        };
+        tmpTable.theadAdd({
+          type: "top",
+          sourceContainerData: datawdj2,
+          targetParentPosition: []
+        });
+
+        const ZDYData = {
+          cell: {
+            value: "自定义表区"
+          },
+          // childrenShow: false,
+          id: "zdy"
+        };
+
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: ZDYData,
+          targetParentPosition: []
+        });
+
+        const data1 = {
+          cell: {
+            value: "1、"
+          },
+          style: {
+            // display:'none'
+          },
+          id: "row1"
+        };
+
+        const data2 = {
+          cell: {
+            value: "2、"
+          },
+          tbodyConfig: {
+            weight: 3,
+            dbclick: {
+              displayType: "text"
+            }
+          },
+          style: {
+            // display:'none'
+          },
+          id: "row2",
+          config: {
+            readonly: true
+          }
+        };
+
+        const select = {
+          showType: "select",
+          cell: {
+            value: "test"
+          },
+          id: "select",
+          config: {
+            readonly: true
+          }
+        };
+
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: data1,
+          targetParentPosition: [0]
+        });
+        // tmpTable.theadAdd({
+        //   type: "left",
+        //   sourceContainerData: data2,
+        //   targetParentPosition: [0]
+        // });
+        tmpTable.render();
+        this.tableList.push(tmpTable);
+        this.tmpTable = tmpTable;
+        // debugger
+        tmpTable.getTheadLeavesList1("top");
+      },
+      addTableLeft() {
+        // debugger;
+        this.tableCount++;
+        const tmpTable: BaseTable = new BaseTable("表" + this.tableCount, {
+          tableGroupId: "haier",
+          // isShowColIndex: true, // 是否显示 列标识：A、B、D、C
+          // isShowRowIndex: true // 是否显示 行标识：1、2、3、4
+          debugLevel: 0
+        });
+        // tmpTable.position.table = this.tableCount - 1;
+        tmpTable.$subject.subscribe(this.onTableChange, this);
+
+        const datawlh = {
+          cell: {
+            value: "物料号"
+          },
+          tbodyConfig: {
+            weight: {
+              cell: {
+                displayClass: {
+                  normal: 100,
+                  dbclick: 100
+                }
+              }
+            },
+            container: {
+              cell: {
+                displayClass: {
+                  normal: {
+                    displayType: "text"
+                  },
+                  dbclick: {
+                    displayType: "select",
+                    select: {
+                      optionList: [
+                        {
+                          text: "html",
+                          value: "1"
+                        },
+                        {
+                          text: "js",
+                          value: "2"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          id: "wlh"
+        };
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: datawlh,
+          targetParentPosition: []
+        });
+
+        const datawdj = {
+          cell: {
+            value: "单价"
+          },
+          childrenShow: false,
+          canSum: true,
+
+          id: "dj"
+        };
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: datawdj,
+          targetParentPosition: []
+        });
+        const datawdj2 = {
+          cell: {
+            value: "单价2"
+          },
+          childrenShow: false,
+          canSum: true,
+
+          id: "dj2"
+        };
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: datawdj2,
+          targetParentPosition: []
+        });
+
+        const ZDYData = {
+          cell: {
+            value: "自定义表区"
+          },
+          childrenShow: false,
+          id: "zdy"
+        };
+
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: ZDYData,
+          targetParentPosition: []
+        });
+
+        const data1 = {
+          cell: {
+            value: "1、"
+          },
+          style: {
+            // display:'none'
+          },
+          id: "row1"
+        };
+
+        const data2 = {
+          cell: {
+            value: "2、"
+          },
+          tbodyConfig: {
+            weight: 3,
+            dbclick: {
+              displayType: "text"
+            }
+          },
+          style: {
+            // display:'none'
+          },
+          id: "row2",
+          config: {
+            readonly: true
+          }
+        };
+
+        const select = {
+          showType: "select",
+          cell: {
+            value: "test"
+          },
+          id: "select",
+          config: {
+            readonly: true
+          }
+        };
+
+        tmpTable.theadAdd({
+          type: "left",
+          sourceContainerData: data1,
+          targetParentPosition: [0]
+        });
+        // tmpTable.theadAdd({
+        //   type: "left",
+        //   sourceContainerData: data2,
+        //   targetParentPosition: [0]
+        // });
+        tmpTable.render();
+        tmpTable.addOneCol();
+        tmpTable.addOneCol();
+        this.tableList.push(tmpTable);
+        this.tmpTable = tmpTable;
+        // debugger
+        tmpTable.getTheadLeavesList1("top");
+      },
+      addOneRowTbody() {
+        const table: BaseTable = this.tmpTable;
+        table
+          .addOneRow
+          // [
+          //   1,
+          //   2,
+          //   {
+          //     cell: {
+          //       value: 123
+          //     }
+          //   }
+          // ]
+          // ,{
+          //   type:'left',
+
+          // }
+          ();
+        // table.addOneRow({ data: { 工厂: 1 } });
+      },
+      addOneCol() {
+        const data = null;
+        const targetPosition = (this.tmpTHead || {}).theadPosition;
+        const table: BaseTable = this.tmpTable;
+        table.addOneCol(
+          [
+            1,
+            2,
+            {
+              cell: {
+                value: 123
+              }
+            }
+          ],
+          {
+            sourceContainerData: {
+              cell: {
+                value: "单元格"
+              }
+            }
+          }
+        );
+      },
+      exportTbodyData() {
+        this.tmpTable.getTbodyData();
+      },
+      addParent() {
+        this.tmpTable.addParent({
+          cell: {
+            value: "新建单元格"
+          },
+          childrenShow: false
+        });
+      },
+      merge() {
+        this.tmpTable.merge();
+      },
+      onKeyClick(key, value) {
+        this.tmpKey = key;
+        this.tmpValue = JSON.stringify(value);
+      },
+      change() {
+        const value = JSON.parse(this.tmpValue);
+        const container = this.tmpTable.getContainer(this.tmpTHead.position);
+        container.cell[this.tmpKey] = value;
+      },
+      changeConatienrUserData() {
+        const container = this.tmpTable.getContainer(this.tmpTHead.position);
+        container.userData = {
+          test: 123
+        };
+      },
+      addMKBM() {
+        this.tableCount++;
+        const tmpTable: BaseTable = new BaseTable("表" + this.tableCount, {
+          tableGroupId: "haier",
+          debugLevel: 0,
+          canResizeWidth: true
+        });
+        tmpTable.$subject.subscribe(this.onTableChange, this);
+        this.tmpTable = tmpTable;
+        const theadList = [
+          "模块编码",
+          "模块专用号",
+          "模块描述",
+          "模块属性",
+          "资源量",
+          "工厂",
+          "高峰月产能",
+          "要求供货时间",
+          "价格单位",
+          "采购单位",
+          "货币",
+          "供应商预测日产能",
+          "计算单价",
+          "终投单价"
+        ];
+        theadList.forEach(title => {
+          const addData = {
+            cell: {
+              value: title,
+              title: title === "模块编码" ? "123" : ""
+            },
+            canSum: title === "终投单价" ? true : false,
+            tbodyConfig: {
+              weight: {
+                cell: {
+                  displayClass: {
+                    normal: 100,
+                    dbclick: 100
+                  }
+                }
+              },
+              container: {
+                cell: {
+                  verification: {
+                    hasVerification: title === "模块编码" ? true : false,
+                    vTypes: ["decimal%3"] //
+                  },
+                  value:
+                    title === "终投单价"
+                      ? "= {sc-2}{sr} + {sc -1}{sr}"
+                      : undefined,
+                  displayClass: {
+                    normal: {
+                      displayType: "text",
+                      select: {
+                        optionList: [
+                          {
+                            text: "html",
+                            value: "1"
+                          },
+                          {
+                            text: "js",
+                            value: "2"
+                          }
+                        ]
+                      }
+                    },
+                    dbclick: {
+                      displayType: "input",
+                      select: {
+                        optionList: [
+                          {
+                            text: "html",
+                            value: "1"
+                          },
+                          {
+                            text: "js",
+                            value: "2"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            style: {
+              background: "#1fd8f4",
+              width: "100px"
+            },
+            id: title
+          };
+          tmpTable.theadAdd({
+            type: "top",
+            sourceContainerData: addData,
+            targetParentPosition: []
+          });
+        });
+        tmpTable.render();
+        this.addOneRowTbody();
+        this.tableList.push(tmpTable);
+        // tmpTable.setTbodyData([]);
+      },
+      addZCLF() {
+        const theadList = [
+          "物料号(编码）",
+          "物料描述",
+          "规格（请详细描述主材料属性参数）",
+          "二三级物料分类",
+          "自制外购",
+          "注塑件克重",
+          "二三级供应商名称",
+          "损耗率（%）",
+          "订单单位  （采购单位）",
+          "耗用数量（单耗）",
+          "单价",
+          "成本"
+        ];
+        theadList.forEach(title => {
+          const addData = {
+            cell: {
+              value: title
+            },
+
+            canSum: ["成本"].indexOf(title) !== -1,
+            id: title
+          };
+          const tmpTable: BaseTable = this.tmpTable;
+          tmpTable.theadAdd({
+            type: "top",
+            sourceContainerData: addData,
+            targetParentPosition: []
+          });
+        });
+        this.tmpTable.render();
+      },
+      delOne() {
+        // debugger
+        const container = this.tmpTHead;
+        const table: BaseTable = this.tmpTable;
+        if (container) {
+          table.theadDelete({
+            targetContainerPosition: container.theadPosition,
+            type: container.type
+          });
+        }
+        table.renderAll();
+      }
+    },
+
+    created() {
+      this.addTable();
+      // this.addZCLF();
+      // this.addOneRowTbody();
+      // this.addOneRowTbody();
+      // this.addOneRowTbody();
+      // this.addOneRowTbody();
+      // this.addOneRowTbody();
+      // this.addTableLeft();
+      // this.addMKBM();
+    }
+  });
+</script>
+
+<style>
+  .table-list-left-div {
+    position: relative;
+    width: 100%;
+    float: left;
+    /* margin: 0 auto; */
+  }
+
+  .table-list-right-div {
+    position: relative;
+    margin-top: 20px;
+    width: 199%;
+    float: left;
+    /* margin: 0 auto; */
+  }
+</style>
+

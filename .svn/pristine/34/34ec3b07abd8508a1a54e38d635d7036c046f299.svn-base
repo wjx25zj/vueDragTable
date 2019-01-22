@@ -1,0 +1,55 @@
+
+import { BaseCell } from '../../module/cell/baseCell';
+import { ContainerInterface } from '../../interface/ContainerInterface';
+import * as _ from '../../utils';
+import { BaseStyle } from '../style/Style';
+import { Container } from './container';
+// 只有对于容器来说才有相对位置
+
+export class TbodyContainer extends Container {
+    public canExpand: boolean = false;
+    public baseStyle = new BaseStyle();
+    public cell: BaseCell = new BaseCell('');
+
+    public children: Container[] = new Array(); // 子容器
+    public parent: Container | null = null; // 父容器
+
+    public position: number[] = new Array(); // 相对于根节点的职位
+
+    /**
+     * 设置tbody属性 部分特殊处理
+     *
+     * @param {ContainerInterface} containerData
+     * @memberof TbodyContainer
+     */
+    public setContainerData(containerData: ContainerInterface) {
+        for (const key in containerData) {
+            if (containerData.hasOwnProperty(key)) {
+                const value: any =  (containerData as any)[key];
+                if (key === 'cell' && value) {
+                    const cell = new BaseCell('');
+                    cell.setCellData(value);
+                    this.setProperty(key, cell);
+                } else if (key === 'bodyData'){
+                    const bodyData = Array();
+                    value.forEach((tr: any[]) => {
+                        const tmpTr = new Array();
+                        tr.forEach((td: any) => {
+                            if (td && td.EPI_READY) {
+                                const tmpTheadContainer = new TbodyContainer();
+                                tmpTheadContainer.setContainerData(td);
+                                tmpTr.push(tmpTheadContainer);
+                            }
+                        });
+                        bodyData.push(tmpTr);
+                    });
+                    this.setProperty(key, bodyData);
+                } else {
+                    this.setProperty(key, value);
+                }
+
+            }
+        }
+    }
+}
+

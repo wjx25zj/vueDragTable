@@ -1,0 +1,17 @@
+
+
+import { BaseTable } from './viewModule/table/baseTable';
+export class DragTable {
+    public table: any;
+    public getTable(id?: any, config?: any){
+        switch (id) {
+            default: this.table = new BaseTable(id, config);
+        }
+        return this.table;
+    }
+
+    protected setConfig(config: any) {
+
+    }
+    protected init() { }
+}

@@ -1,0 +1,3 @@
+export class StaicStyle {
+    public static baseWidth = 100;
+}

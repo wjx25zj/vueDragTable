@@ -1,0 +1,1020 @@
+import { BaseThead } from '../thead/baseThead';
+import { TheadContainer } from '../container/TheadContainer';
+import { BaseTbody } from '../tbody/baseTbody';
+import * as _ from '../../utils/index';
+import { DragStartData } from '../../interface/DragStartData';
+import { BaseStyle } from '../style/Style';
+import { IndexContainer } from '../container/IndexContainer';
+import { BaseCell } from '../../module/cell/baseCell';
+import { Subject } from '../../communication/Subject';
+import { ContainerBearing } from '../../interface/DragTsData';
+export class BaseTable {
+    //  表格事件
+    public tableSubject = new Subject();
+    public tableId = ''; // 表格内容
+    public tableName = '表名test'; // 表名
+    public showType = 0; // 显示类型
+    public colNumber: any[] = []; // 最上面'A', 'B', 'C', 'D'.....
+    public rowNumber: any[] = []; // 最左边面1, 2, 3, 4, 5.....
+    public tableHeadTop: any[] = []; // 用于显示的上侧表头
+    public tableHeadLeft: any[] = []; // 用于显示的左侧表头
+    public tableBody: any[] = []; // 用于显示的表内容
+    public tableHeadTopLeft = new TheadContainer('top-left', 1, 1); // 左上角空白单元格长宽
+    public theadTopEntity: BaseThead; // 上册表头实体
+    public theadLeftEntity: BaseThead; // 左册表头实体
+    public tbodyEntity = new BaseTbody(); // 表内容实体
+    // 默认设置
+    public defaultConfig = {
+        table: {
+            isShowColIndex: false,  // 是否显示ABDC
+            isShowRowIndex: false, // 是否显示1、2、3、4
+            isOverflow: false, // 超出宽度是否滚动
+            canResizeWidth: false, // 是否可以控制行列宽度
+        },
+        topThead: {
+            editStatus: true, // 表头是否可以编辑（总体设置）
+        },
+        leftThead: {
+            editStatus: true, // 表头是否可以编辑（总体设置）
+        },
+        container:{
+            editStatus: true,
+            baseSide1: 100,
+            baseSide2 : 28,
+        }
+    };
+    // 表格的总体设置
+    protected config = {
+        isShowColIndex: false,
+        isShowRowIndex: false,
+        isOverflow: false,
+        canResizeWidth: false,
+    };
+    // 表格的总体样式
+    protected style = {
+        scrollTop: 0, // 滚动条 用于主表与上侧固定表头滚动条联动操作
+        scrollLeft: 0, // 滚动条 用于主表与左侧固定表头滚动条联动操作
+        // 主表样式
+        mainTable: {
+            overflow: this.config.isOverflow ? 'auto' : 'visible',
+            width: !this.config.isOverflow ? 'auto' : '1000px',
+            height: !this.config.isOverflow ? 'auto' : '500px',
+        },
+        // 上侧表头
+        topTable: {
+            overflow: this.config.isOverflow ? 'hidden' : 'visible',
+        }
+    };
+    protected selectedTh: Set<any> = new Set(); // 选中的表头Set
+    private keyDownList: Set<string> = new Set(); // 键盘按键按下状态的Set
+
+    constructor(id: any, config: any) {
+        this.tableId = id;
+        this.theadTopEntity = new BaseThead('top', this);
+        this.theadLeftEntity = new BaseThead('left', this);
+        this.initSubject(this);
+        this.initDefaultConfig(config);
+    }
+
+
+    /**
+     * 初始化订阅事件
+     *
+     * @param {*} _this
+     * @memberof BaseTable
+     */
+    public initSubject(_this: any) {
+        _this = _this || this;
+        if (_this.theadTopEntity) {
+            _this.theadTopEntity.theadSubject.subscribe(_this.onTheadChange, _this);
+        }
+        if (_this.theadLeftEntity) {
+            _this.theadLeftEntity.theadSubject.subscribe(_this.onTheadChange, _this);
+        }
+    }
+
+    /**
+     * 初始化默认设置
+     *
+     * @public
+     * @param {*} config
+     * @memberof BaseTable
+     */
+    public initDefaultConfig(config: any) {
+        try {
+            for (const key in this.defaultConfig) {
+                if (config && config.hasOwnProperty(key)) {
+                    (this.defaultConfig as any)[key] = config[key];
+                }
+            }
+            this.config = this.defaultConfig.table;
+            this.theadTopEntity.setConfig(this.defaultConfig.topThead);
+            this.theadLeftEntity.setConfig(this.defaultConfig.leftThead);
+        } catch (error) {
+            console.error('initDefaultConfig error');
+        }
+
+    }
+
+    /**
+     * 初始化表内容
+     */
+    public initTbody(width: number, height: number) {
+        this.tbodyEntity.initData(width || 15, height || 15);
+        this.render();
+    }
+
+    /**
+     * 初始化一行表头
+     */
+    public initThead(type: string, data: any[]) {
+        const theadEntity = this.getEntity(type);
+        theadEntity.initThead(type, data);
+        this.render();
+    }
+
+
+    /**
+     * 手动添加表头
+     *
+     * @param {string} tpye left或者top
+     * @param {number[]} targetParentPostion 父级容器位置
+     * @param {number} insertIndex 插入位置
+     * @param {DragStartData} data 插入的数据
+     * @memberof BaseTable
+     */
+    public addTheadManual(tpye: string, targetParentPostion: number[], insertIndex: number, data: DragStartData) {
+        const Entity = this.getEntity(tpye);
+        this.processThead(Entity, targetParentPostion, insertIndex, data);
+    }
+
+
+    /**
+     * 表头改变事件
+     *
+     * @param {*} msg
+     * @memberof BaseTable
+     */
+    public onTheadChange(msg: any) {
+        this.tableSubject.sendMsg({
+            type: 'theadChange',
+            data: {
+                table: this,
+                message: msg,
+            },
+        });
+        this.afterDragop(msg);
+        this.render();
+    }
+
+    /**
+     * 行列标识失去焦点 重置行列
+     *
+     * @param {*} container
+     *  @param {*} ev 响应事件
+     * @memberof BaseTable
+     */
+    public colRowIndexOnBlur(container: any) {
+        if (!this.keyDownList.has('Control')) {
+            this.resetColRowNumber();
+        }
+    }
+
+    /**
+     * 重置表头Cell选中selected
+     *
+     * @memberof BaseTable
+     */
+    public resetTableHeadArray() {
+        this.tableHeadTop.forEach((tr: any, i) => {
+            tr.forEach((th: any, j: number) => {
+                th.selected = false;
+            });
+        });
+        this.tableHeadLeft.forEach((tr: any, i) => {
+            tr.forEach((th: any, j: number) => {
+                th.selected = false;
+            });
+        });
+    }
+
+
+    /**
+     * 处理表头
+     *
+     * @param {BaseThead} thead
+     * @param {number[]} targetPostion
+     * @param {number} insertIndex
+     * @param {DragStartData} source
+     * @memberof DefaultTable
+     */
+    public processThead(thead: BaseThead, targetParentPostion: number[], insertIndex: number, source: DragStartData) {
+
+        const targetParentContainer: TheadContainer = thead.getContainer(targetParentPostion);
+        const sourcePosition = source.containerData.position || [];
+        const souceParentPosition = _.dropRight(sourcePosition);
+        const souceIndexPosition = _.last(sourcePosition);
+        switch (source.operationType) {
+            case 'add':
+                targetParentContainer.containerAdd(source, insertIndex);
+                break;
+            case 'move':
+                if (JSON.stringify(souceParentPosition) === JSON.stringify(targetParentPostion) && souceIndexPosition > insertIndex) {
+                    // 如果目标容器和源容器在同一个父级容器下，且源容器index小于目标容器index 则先删除源容器 再添加源容器的拷贝
+                    const sourceParentContainer: TheadContainer = thead.getContainer(souceParentPosition);
+                    const sourceContainer = thead.getContainer(sourcePosition).clone();
+                    sourceParentContainer.deletChild(souceIndexPosition, 1, true);
+                    targetParentContainer.addChild(sourceContainer, insertIndex);
+                } else {
+                    // 反之先添加源容器的拷贝 再删除除源容器
+                    const sourceParentContainer: TheadContainer = thead.getContainer(souceParentPosition);
+                    const sourceContainer = thead.getContainer(sourcePosition).clone();
+                    targetParentContainer.addChild(sourceContainer, insertIndex);
+                    sourceParentContainer.deletChild(souceIndexPosition, 1, true);
+                }
+                break;
+            case 'add-replace':
+                targetParentContainer.replaceChild(insertIndex, thead.createContain(source), false);
+                break;
+            case 'move-replace':
+                const sourceParentContainer: TheadContainer = thead.getContainer(souceParentPosition);
+                const sourceContainer = thead.getContainer(sourcePosition).clone();
+                targetParentContainer.replaceChild(insertIndex, sourceContainer, false);
+                const tmpContainer = new TheadContainer(sourceContainer.name, 1, 1);
+                tmpContainer.setCell(new BaseCell('', 1, 1));
+                sourceParentContainer.replaceChild(souceIndexPosition, tmpContainer, true);
+                break;
+            default:
+
+        }
+        this.render();
+    }
+
+
+    /**
+     * serialize 序列化
+     */
+    public serialize() {
+        try {
+            const Table: any = {};
+            for (const key in this) {
+                if (this.hasOwnProperty(key)) {
+                    const value: any = this[key];
+                    if (typeof value === 'object') {
+                        if (key.indexOf('Subject') !== -1 || key === '$root') {
+                            continue;
+                        } else if (key === 'selectedTh' || (key === 'keyDownList')) {
+                            Table[key] = Array.from(this[key] as any);
+                        } else if (value.EPI_READY) {
+                            Table[key] = value.clone(['Subject', '$root']);
+                        } else {
+                            Table[key] = this[key];
+                        }
+                    } else {
+                        Table[key] = this[key];
+                    }
+                }
+            }
+            return Table;
+        } catch (error) {
+            console.error('serialize 中出现出错');
+            console.error(error);
+        }
+
+
+    }
+
+    /**
+     * Deserialize 反序列化
+     */
+    public Deserialize(tableJson: any) {
+        const self: any = this;
+        try {
+            for (const key in tableJson) {
+                if (tableJson.hasOwnProperty(key)) {
+                    const val = tableJson[key];
+                    if (val.EPI_READY) {
+                        (self[key] as any).setContainerData(val);
+                    } else if (key === 'selectedTh' || key === 'keyDownList') {
+                        self[key] = new Set((tableJson as any)[key]);
+                    } else {
+                        self[key] = val;
+                    }
+                }
+            }
+            this.render();
+        } catch (error) {
+            console.error('Deserialize 中出现出错');
+            console.error(error);
+        }
+    }
+
+    /**
+     *  添加父级
+     *
+     * @returns
+     * @memberof DefaultTable
+     */
+    public addParent(): void {
+        let fristContainer = null;
+        if (this.selectedTh.size > 0) {
+            fristContainer = Array.from(this.selectedTh)[0];
+        }
+        const isSameParent = this.isSameParent();
+        if (isSameParent && fristContainer) {
+            const theadEntity: BaseThead = this.getEntity(fristContainer.name);
+            if (theadEntity === null) { return; }
+            const sourceContainerList: TheadContainer[] = [];
+            this.selectedTh.forEach((th: TheadContainer) => {
+                sourceContainerList.push(theadEntity.getContainer(th.position));
+            });
+            sourceContainerList.sort((a: TheadContainer, b: TheadContainer) => {
+                return _.last(b.position) - _.last(a.position);
+            });
+            theadEntity.addParent(sourceContainerList);
+            this.render();
+        }
+        this.selectedTh.clear();
+    }
+
+    /**
+     * 合并单元格
+     *
+     * @protected
+     * @memberof BaseTable
+     */
+    protected merge() {
+        if (this.canMerge()) {
+            let firstContainer: any;
+            this.selectedTh.forEach((th: TheadContainer, i: number) => {
+                if (!firstContainer) {
+                    firstContainer = th;
+                } else {
+                    firstContainer.mergeList.push(th);
+                }
+            });
+            if (firstContainer) {
+                const theadEntity = this.getEntity(firstContainer.name);
+                theadEntity.merge(firstContainer);
+            }
+        }
+        this.selectedTh.clear();
+        this.render();
+    }
+
+    /**
+     * 拆分单元格
+     *
+     * @protected
+     * @memberof BaseTable
+     */
+    protected disMerge() {
+        this.selectedTh.forEach((th: TheadContainer, i: number) => {
+            if (th.mergeList.length > 0) {
+                const theadEntity = this.getEntity(th.name);
+                theadEntity.disMerge(th);
+            }
+        });
+        this.selectedTh.clear();
+        this.render();
+    }
+
+    /**
+     *
+     * 重置行列选中
+     * @private
+     * @memberof BaseTable
+     */
+    private resetColRowNumber() {
+        this.rowNumber.forEach((item: any) => {
+            item.selected = false;
+        });
+        this.colNumber.forEach((item: any) => {
+            item.selected = false;
+        });
+        // this.render(); // 加上之前出现拖拽控制宽度时需要点击2次才能控制的bug
+    }
+
+    /**
+     * 判断是否符合合并要求
+     *
+     * @private
+     * @returns
+     * @memberof BaseTable
+     */
+    private canMerge() {
+        const isSameParent = this.isSameParent();
+        return isSameParent;
+    }
+
+
+
+    /**
+     * 按键抬起
+     *
+     * @param {*} ev
+     * @memberof BaseTable
+     */
+    private onKeyUp(ev: any) {
+        this.keyDownList.delete(ev.key);
+    }
+
+    /**
+     * 拖拽删除事件
+     *
+     * @param {*} ev
+     * @memberof BaseTable
+     */
+    private dragDel(ev: any) {
+        const targetDom = ev.target;
+        const stringData = ev.dataTransfer.getData('dragStartData');
+        let dragStartData: DragStartData;
+        if (stringData) {
+            dragStartData = JSON.parse(ev.dataTransfer.getData('dragStartData'));
+            const theadEntity: BaseThead = this.getEntity(dragStartData.containerData.name);
+            const tmpContainer = theadEntity.createContain(dragStartData);
+            theadEntity.dragDel(tmpContainer);
+        }
+    }
+
+    /**
+     * dragStart 事件
+     */
+    private dragStart(ev: any, th: any) {
+        const theadEntity = this.getEntity(th.name);
+        const dragStartData: DragStartData = {
+            operationType: 'move',
+            containerData: th,
+        };
+        theadEntity.dragStart(ev, dragStartData);
+    }
+
+    /**
+     * dragOver事件
+     */
+    private dragOver(ev: any, th?: any) {
+        if (th) {
+            const theadEntity: BaseThead = this.getEntity(th.name);
+            if (theadEntity.dragStartData) {
+                if (th !== theadEntity.dragStartData.containerData) {
+                    theadEntity.dragOver(ev, th);
+                }
+            } else {
+                theadEntity.dragOver(ev, th);
+            }
+
+
+        } else {
+            ev.preventDefault();
+        }
+    }
+
+    /**
+     * 拖拽drop事件
+     */
+    private drop(ev: any, th?: any) {
+        if (th) {
+            const theadEntity = this.getEntity(th.name);
+            theadEntity.drop(ev, th);
+        }
+    }
+
+    /**
+     * 按键按下
+     *
+     * @param {*} ev
+     * @memberof BaseTable
+     */
+    private onKeyDown(ev: any) {
+        this.keyDownList.add(ev.key);
+    }
+
+    /**
+     *
+     * 鼠标引动进单元格边缘时显示边框
+     * @param {*} ev
+     * @param {*} th
+     * @memberof BaseTable
+     */
+    private onMouseMove(ev: any, th: IndexContainer) {
+        if (this.config.canResizeWidth) {
+            BaseStyle.removeBorder(ev.currentTarget);
+            const bear = BaseStyle.checkBearing(ev);
+            if (th.name === 'top') {
+                if (bear === 'right') {
+                    ev.srcElement.style.cursor = 'e-resize';
+                    BaseStyle.addBorder(ev.currentTarget, bear);
+                    th.canDragResize = true;
+                } else {
+                    ev.srcElement.style.cursor = 'auto';
+                }
+            } else if (th.name === 'left') {
+                if (bear === 'bottom') {
+                    ev.srcElement.style.cursor = 's-resize';
+                    BaseStyle.addBorder(ev.currentTarget, bear);
+                    th.canDragResize = true;
+                } else {
+                    ev.srcElement.style.cursor = 'auto';
+                }
+            }
+
+        }
+    }
+
+    /**
+     * 当鼠标按下时 开始拖拽控制大小
+     *
+     * @param {*} ev
+     * @param {*} th
+     * @memberof BaseTable
+     */
+    private onMouseDown(ev: any, th: IndexContainer) {
+        if (this.config.canResizeWidth && th.canDragResize) {
+            console.log('按下');
+            const thContainerCopy: TheadContainer = this.getContainerLast(th);
+            const targetDom: any = {};
+            targetDom.initMouseLeftX = ev.pageX; // 鼠标起始X位置
+            targetDom.initMouseTopY = ev.pageY; // 鼠标起始Y位置
+            targetDom.initWidth = ev.target.clientWidth; // dom原来的宽度
+            targetDom.initHeight = ev.target.clientHeight; // dom原来的高度
+            targetDom.initLeft = ev.pageX - targetDom.initWidth;
+            targetDom.initTop = ev.pageY - targetDom.initHeight;
+            targetDom.x = targetDom.initLeft;
+            targetDom.y = targetDom.initTop;
+            console.log(targetDom);
+            const mousemove = (e: any) => {
+                if (th.name === 'top') {
+                    const x = (e.pageX - targetDom.initMouseLeftX);
+                    if (x * -1 > targetDom.initWidth) {
+                        return;
+                    } else {
+                        th.config.baseSide1 = targetDom.initWidth + x;
+                        th.calWidth();
+                    }
+                    if (th.position[0] - this.theadLeftEntity.side2 >= 0) {
+                        this.tbodyEntity.changeOneColStyle(th.position[0] - this.theadLeftEntity.side2, { width: th.config.baseSide1 + 'px' });
+                    }
+
+                } else if (th.name === 'left') {
+                    const y = (e.pageY - targetDom.initMouseTopY);
+                    if (y * -1 > targetDom.initHeight) {
+                        return;
+                    } else {
+                        th.config.baseSide2 = targetDom.initHeight + y;
+                        th.calWidth();
+                    }
+                    const bodyIndex = th.position[0] - this.theadTopEntity.side2;
+                    console.log(bodyIndex);
+                    if (bodyIndex >= 0) {
+                        this.tbodyEntity.changeOneRowStyle(bodyIndex, { height: th.config.baseSide2 + 'px' });
+                    }
+
+                }
+
+            };
+            const mouseup = (e: any) => {
+                document.removeEventListener('mouseup', mouseup);
+                document.removeEventListener('mousemove', mousemove);
+                if (thContainerCopy) {
+
+                    // console.log(thContainerCopy.style.width);
+                    const Entity = this.getEntity(thContainerCopy.name);
+                    const thContaineSource: TheadContainer = Entity.getContainer(thContainerCopy.position);
+                    if (thContainerCopy.name === 'top') {
+                        thContainerCopy.config.baseSide1 = th.config.baseSide1;
+                        thContainerCopy.calWidth();
+                        thContaineSource.config.baseSide1 = th.config.baseSide1;
+                    } else if (thContainerCopy.name === 'left') {
+                        thContainerCopy.config.baseSide2 = th.config.baseSide1;
+                        thContainerCopy.calWidth();
+                        thContaineSource.config.baseSide2 = th.config.baseSide1;
+                    }
+                }
+                this.render();
+            };
+            document.addEventListener('mousemove', mousemove);
+            document.addEventListener('mouseup', mouseup);
+        }
+
+    }
+
+    /**
+     * 根据RowCol.name 判断上、左表头、然后获得最后一行的单元格
+     *
+     * @private
+     * @param {*} RowCol
+     * @returns
+     * @memberof BaseTable
+     */
+    private getContainerLast(RowCol: any) {
+        let res: any;
+        if (RowCol.name === 'top') {
+            const index = RowCol.position[0];
+            if (index - this.theadLeftEntity.side2 >= 0) {
+                res = this.theadTopEntity.leafIndexList[index - this.theadLeftEntity.side2];
+            } else {
+                res = this.theadLeftEntity.leafIndexList[index];
+            }
+        } else if (RowCol.name === 'left') {
+            res = this.theadLeftEntity.leafIndexList[RowCol.position[0] - this.theadTopEntity.side2];
+        }
+        return res;
+    }
+
+    /**
+     * 当鼠标划出单元格 取消边框和鼠标样子
+     *
+     * @param {*} ev
+     * @param {*} th
+     * @memberof BaseTable
+     */
+    private onMouseOut(ev: any, th: IndexContainer) {
+        ev.currentTarget.style.cursor = 'auto';
+        BaseStyle.removeBorder(ev.currentTarget);
+        th.canDragResize = false;
+    }
+
+    /**
+     * 粘贴事件
+     *
+     * @param {*} e
+     * @param {*} container
+     * @memberof BaseTable
+     */
+    private onpaste(e: any, container: any) {
+        console.log('pastedText');
+        let pastedText;
+        if (e.clipboardData && e.clipboardData.getData) { // IE
+            pastedText = e.clipboardData.getData('Text');
+        } else {
+            pastedText = e.originalEvent.clipboardData.getData('Text'); // e.clipboardData.getData('text/plain');       
+        }
+        container.cell.content = pastedText;
+        this.inputOnBlur(container);
+    }
+
+    /**
+     * 获得焦点
+     *
+     * @param {*} dom
+     * @memberof BaseTable
+     */
+    private getfocus(dom: any) {
+        dom.srcElement.focus();
+    }
+
+
+    /**
+     * 表头双击后改变type
+     *
+     * @param {*} container
+     * @memberof BaseTable
+     */
+
+    private ondbClick(container: any) {
+        const Entity: BaseThead = this.getEntity(container.name);
+        if (Entity.config.editStatus) {
+            container.changeShowType(1);
+        }
+    }
+
+    /**
+     * input失去焦点
+     *
+     * @param {*} container
+     *  @param {*} ev 响应事件
+     * @memberof BaseTable
+     */
+    private inputOnBlur(container: any, needUpdate?: boolean) {
+        container.showType = 0;
+        if (needUpdate) {
+            const Entity = this.getEntity(container.name);
+            const sourceContainer = Entity.getContainer(container.position);
+            sourceContainer.setCell(container.cell);
+            sourceContainer.setProperty('showType', 0);
+        }
+    }
+    /**
+     * 表头点击事件
+     *
+     * @private
+     * @param {*} th
+     * @memberof BaseTable
+     */
+    private onThClick(th: any) {
+        this.tableSubject.sendMsg({
+            type: 'click',
+            data: {
+                table: this,
+                object: th,
+            }
+        });
+        th.selected = !th.selected;
+        if (th.selected) {
+            this.selectedTh.add(th);
+        } else {
+            this.selectedTh.delete(th);
+        }
+    }
+    /**
+     * 表头点击后 失去焦点
+     *
+     * @param {*} container
+     *  @param {*} ev 响应事件
+     * @memberof BaseTable
+     */
+    private onThOnBlur(container: any) {
+        if (!this.keyDownList.has('Control')) {
+            this.resetTableHeadArray();
+        }
+    }
+
+    /**
+     * 行列点击事件
+     *
+     * @param {*} dom
+     * @param {*} th
+     * @memberof BaseTable
+     */
+    private onTrClick(dom: any, th: TheadContainer) {
+        th.selected = true;
+    }
+
+    /**
+     * 滚动事件 调整scrollTop scrollLeft
+     *
+     * @private
+     * @param {*} ev
+     * @memberof BaseTable
+     */
+    private onScroll(ev: any) {
+        this.style.scrollTop = ev.srcElement.scrollTop;
+        this.style.scrollLeft = ev.srcElement.scrollLeft;
+    }
+
+
+
+    /**
+     * 渲染表格渲染
+     *
+     * @memberof BaseTable
+     */
+    private render() {
+        if (this.theadTopEntity) {
+            this.tableHeadTop = this.theadTopEntity.convert2TheadTopList();
+        }
+        if (this.theadLeftEntity) {
+            this.tableHeadLeft = this.theadLeftEntity.convert2TheadLeftList();
+        }
+        this.renderTBody();
+        this.resizeTable();
+    }
+
+    /**
+     * 渲染表格内容
+     *
+     * @memberof DefaultTable
+     */
+    private renderTBody() {
+        this.tableBody = this.tbodyEntity.convert();
+    }
+
+    /**
+     * 保证table 表头与表内容长宽高一致 并且创建行、列标志数组
+     *
+     * @memberof DefaultTable
+     */
+    private resizeTable() {
+        let maxWidth;
+        let maxHeight;
+        const theadTopWidth = this.theadTopEntity.side1;
+        const theadTopHeight = this.theadTopEntity.side2;
+        const theadLeftHeight = this.theadLeftEntity.side1;
+        const theadLeftWidth = this.theadLeftEntity.side2;
+        const tbodyWidth = this.tbodyEntity.side1;
+        const tbodyHeight = this.tbodyEntity.side2;
+        const topLeftCell = new BaseCell('', theadLeftWidth, theadTopHeight);
+        topLeftCell.style.width = topLeftCell.config.baseWidth * theadLeftWidth + 'px';
+        this.tableHeadTopLeft.setCell(topLeftCell);
+
+        if (theadTopWidth > tbodyWidth) {
+            maxWidth = theadTopWidth;
+            for (let i = 0; i < maxWidth - tbodyWidth; i++) {
+                this.tbodyEntity.addCol(new Array(tbodyHeight).fill({ value: '' }));
+            }
+        } else {
+            maxWidth = tbodyWidth;
+            if (this.tableHeadTop.length > 0) {
+                for (let i = 0; i < maxWidth - theadTopWidth; i++) {
+                    const tmpContainer = new TheadContainer('top', theadTopHeight, 1);
+                    tmpContainer.setCell(new BaseCell('', 1, theadTopHeight));
+                    tmpContainer.position = [theadTopWidth + i];
+                    this.theadTopEntity.addChild(tmpContainer);
+                    const tmpContainerCopy = tmpContainer.clone();
+                    this.theadTopEntity.leafIndexList.push(tmpContainerCopy);
+                    this.tableHeadTop[0].push(tmpContainerCopy);
+                }
+            }
+        }
+
+        if (theadLeftHeight > tbodyHeight) {
+            maxHeight = theadLeftHeight;
+            for (let i = 0; i < maxHeight - tbodyHeight; i++) {
+                this.tbodyEntity.addRow(new Array(tbodyWidth).fill({ value: '' }));
+            }
+        } else {
+            maxHeight = tbodyHeight;
+            if (this.tableHeadLeft.length > 0) {
+                for (let i = 0; i < maxHeight - theadLeftHeight; i++) {
+                    const tmpContainer = new TheadContainer('left', theadLeftWidth, 1);
+                    tmpContainer.setCell(new BaseCell('', 1, theadLeftWidth));
+                    tmpContainer.position = [theadLeftWidth + i];
+                    this.theadLeftEntity.addChild(tmpContainer);
+                    this.tableHeadLeft.push([tmpContainer.clone()]);
+                }
+            }
+        }
+
+        const colDiff = maxWidth + theadLeftWidth - this.colNumber.length;
+        if (colDiff < 0) {
+            this.colNumber.splice(this.colNumber.length - (Math.abs(colDiff)), (Math.abs(colDiff)));
+        } else {
+            this.colNumber = this.colNumber.concat(new Array(colDiff).fill('').map((val, i) => {
+                i = this.colNumber.length + i;
+                const container = new IndexContainer('top');
+                container.setCell(new BaseCell(this.getA_Z(i)));
+                container.selected = false;
+                container.positionCheck = false;
+                container.position = [i];
+                return container;
+            }));
+        }
+        const rowDiff = maxHeight + theadTopHeight - this.rowNumber.length;
+        if (rowDiff < 0) {
+            this.rowNumber.splice(this.rowNumber.length - (Math.abs(rowDiff)), (Math.abs(rowDiff)));
+        } else {
+            this.rowNumber = this.rowNumber.concat(new Array(rowDiff).fill('').map((val, i) => {
+                i = this.rowNumber.length + i;
+                const container = new IndexContainer('left');
+                container.setCell(new BaseCell((i + 1)));
+                container.selected = false;
+                container.positionCheck = false;
+                container.position = [i];
+                return container;
+            }));
+        }
+
+    }
+
+    /**
+     * 将序号转换成A、B、C
+     *
+     * @private
+     * @param {number} index
+     * @returns {string}
+     * @memberof DefaultTable
+     */
+    private getA_Z(index: number): string {
+        const shang = Math.floor(index / 26);
+        const yushu = index % 26;
+        let res = '';
+        if (shang > 0) {
+            res += String.fromCharCode(shang + 65 - 1);
+        }
+        res += String.fromCharCode(yushu + 65);
+        return res;
+    }
+
+
+    /**
+     * 当拖拽形成表格后 操作
+     *
+     * @private
+     * @param {*} msg
+     * @returns
+     * @memberof BaseTable
+     */
+    private afterDragop(msg: any) {
+        if (msg) {
+            let position: number[] = [];
+            let insertIndex = null;
+            if (msg.theadType.indexOf('top') !== -1) {
+                switch (msg.targetBearing) {
+                    case ContainerBearing.LEFT:
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = _.last(msg.target.position); break;
+                    case ContainerBearing.RIGHT:
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = _.last(msg.target.position) + 1; break;
+                    case ContainerBearing.TOP:
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = 0; break;
+                    case ContainerBearing.BOTTOM:
+                        position = msg.target.position;
+                        insertIndex = null; break;
+                    case ContainerBearing.INNER:
+                        if (msg.target.cell && msg.target.cell.data.length !== 0) {
+                            const r = window.confirm('该单元格已存在数据，是否替换？');
+                            if (r === true) {
+                                msg.source.operationType += '-replace';
+                            } else {
+                                return;
+                            }
+                        } else {
+                            msg.source.operationType += '-replace';
+                        }
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = _.last(msg.target.position); break;
+                    default:
+                        position = msg.target.position;
+                        insertIndex = null;
+                        break;
+                }
+                this.processThead(this.theadTopEntity, _.clone(position), insertIndex, msg.source);
+            } else if (msg.theadType.indexOf('left') !== -1) {
+                switch (msg.targetBearing) {
+                    case ContainerBearing.TOP:
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = _.last(msg.target.position); break;
+                    case ContainerBearing.BOTTOM:
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = _.last(msg.target.position) + 1; break;
+                    case ContainerBearing.LEFT:
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = 0; break;
+                    case ContainerBearing.RIGHT:
+                        position = msg.target.position;
+                        insertIndex = null; break;
+                    case ContainerBearing.INNER:
+                        if (msg.target.cell && msg.target.cell.data.length !== 0) {
+                            const r = window.confirm('该单元格已存在数据，是否替换？');
+                            if (r === true) {
+                                msg.source.operationType += '-replace';
+                            } else {
+                                return;
+                            }
+                        } else {
+                            msg.source.operationType += '-replace';
+                        }
+                        position = _.dropRight(msg.target.position, 1);
+                        insertIndex = _.last(msg.target.position); break;
+                    default:
+                        position = msg.target.position;
+                        insertIndex = null;
+                        break;
+                }
+                this.processThead(this.theadLeftEntity, _.clone(position), insertIndex, msg.source);
+            }
+        }
+    }
+
+    /**
+     * 批量粘贴 截止2018-10-9还未使用
+     *
+     * @param {*} e
+     * @memberof BaseTable
+     */
+    private mutiPaste(e: any) {
+        console.log(1111);
+    }
+
+    /**
+     * 判断选中的selectedTh 是否是同一个父容器下
+     *
+     * @returns
+     * @memberof BaseTable
+     */
+    private isSameParent() {
+        let lastContainer: any = null;
+        let isSameParent = true;
+        this.selectedTh.forEach((th, i: number) => {
+            if (!lastContainer) {
+                lastContainer = th;
+            } else {
+                if (lastContainer.name !== th.name) {
+                    isSameParent = false;
+                } else if (JSON.stringify(_.dropRight(th.position, 1)) !== JSON.stringify(_.dropRight(lastContainer.position, 1))) {
+                    isSameParent = false;
+                }
+            }
+        });
+        return isSameParent;
+    }
+
+    /**
+     * 获得表头实体
+     *
+     * @protected
+     * @param {string} name
+     * @returns
+     *
+     */
+    private getEntity(name: any): any {
+        switch (name) {
+            case 'top': return this.theadTopEntity;
+            case 'left': return this.theadLeftEntity;
+            case 'tbody': return this.tbodyEntity; // 双击编辑表格时 为了统一失去焦点后的函数
+            default: console.log('getEntity-default'); return this.theadTopEntity;
+        }
+    }
+}

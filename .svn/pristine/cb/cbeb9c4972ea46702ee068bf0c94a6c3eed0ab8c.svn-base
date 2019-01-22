@@ -1,0 +1,26 @@
+
+export class Subject {
+    private callbackList: any[] = [];
+    public subscribe(callback: () => void, _this: any) {
+        this.callbackList.push({
+            fun: callback,
+            arg: _this,
+        });
+    }
+    public unsubscribe(callback: () => void) {
+        const index = this.callbackList.indexOf(callback);
+        if (index > -1) {
+            this.callbackList.splice(index, 1);
+        }
+    }
+
+    public sendMsg(msg: any) {
+        this.notify(msg);
+    }
+
+    private notify(msg: any) {
+        this.callbackList.forEach((obj) => {
+            obj.fun.call(obj.arg, msg);
+        });
+    }
+}
