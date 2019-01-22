@@ -1,5 +1,0 @@
-import { TheadContainerInterface } from './TheadContainerInterface';
-export interface DragStartData {
-    containerData: TheadContainerInterface;
-    operationType?: string;
-}

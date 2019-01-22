@@ -1,5 +1,0 @@
-export interface ContainerInterface {
-    cell: any;
-    name?: string;
-    showType?: number;
-}

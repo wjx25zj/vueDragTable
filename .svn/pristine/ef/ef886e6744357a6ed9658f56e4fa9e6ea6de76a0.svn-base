@@ -1,5 +1,0 @@
-import { ContainerInterface } from './ContainerInterface';
-export interface TheadContainerInterface extends ContainerInterface {
-    position?: number[];
-    mergeList?: any[]
-}

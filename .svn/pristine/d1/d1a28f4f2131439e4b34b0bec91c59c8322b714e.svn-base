@@ -1,8 +1,0 @@
-import { Subject } from '../../communication/Subject';
-
-export class TableControl  {
-    public theadSubject = new Subject();
-    public theadChange(msg?: any) {
-        this.theadSubject.sendMsg(msg);
-    }
-}
