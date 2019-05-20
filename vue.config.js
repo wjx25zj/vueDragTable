@@ -3,10 +3,14 @@ const path = require('path');
 function resolve(dir) {
     return path.join(__dirname, dir)
 }
+
 module.exports = {
     baseUrl: './', //vueConf.baseUrl, // 根域上下文目录
     outputDir: 'dist', // 构建输出目录
     lintOnSave: true,
+    css: {
+        extract: true
+    },
     pages: {
         index: {
             entry: 'src/main.ts',

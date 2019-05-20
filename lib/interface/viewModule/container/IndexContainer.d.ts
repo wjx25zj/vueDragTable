@@ -6,7 +6,5 @@ export interface IndexContainerInterface extends TheadContainerInterface {
     $theadContainer?:TheadContainerInterface;
     type?: 'top' | 'left' | 'top-index' | 'left-index';
     children?: IndexContainerInterface[];
-    theadPosition?: number[];
-    mergeList?: any[];
-    id?: any;
+    renderId?: string;
 }

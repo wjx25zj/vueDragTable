@@ -1,5 +1,4 @@
 import { CellContainerInterface } from "../container/CellContainer";
-import { BaseCellConfigIneterface } from "../../config/BaseCellConfig";
 
 export interface SelectOptionInterface {
     text?: any;
@@ -26,13 +25,16 @@ export interface VerificationInterface {
 }
 
 export interface BaseCellInterface {
+    $groupId?: string;
     value?: any;
+    content?: any;
+    oldValue?: any;
     $parent?: CellContainerInterface;
-    $defConfigId?:string;
+    $defConfigId?: string;
     userData?: any;
     style?: any,
-    config?: BaseCellConfigIneterface;
+    config?: BaseCellInterface;
     displayType?: string;
     displayClass?: DisplayClassInterface;
-    verification?: VerificationInterface
+    verification?: VerificationInterface;
 }

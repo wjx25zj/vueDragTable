@@ -1,86 +1,78 @@
 import { BaseCell } from '../cell/BaseCell';
 import * as _ from '../../utils/index';
 import { IndexContainer } from '../container/IndexContainer';
-import { CellContainerInterface } from '../../interface/viewModule/container/CellContainer';
 import { IndexContainerInterface } from '../../interface/viewModule/container/IndexContainer';
-import { Subject } from '../../communication/Subject';
-import { SubjectMsgInterface } from '../../interface/SubjectMsgInterface';
 
 export class IndexThead extends IndexContainer {
-    public children: IndexContainer[] = new Array();
-    public indexTheadSubject = new Subject();
-    public leafIndexList: any[] = []; // 叶子节点顺序列表
-    public leafIndexList2: any[] = []; // 叶子节点顺序列表
-
+    public $leafIndexList: IndexContainer[];
+    public $leafIndexList2: IndexContainer[];
     constructor(param: IndexContainerInterface) {
         super(param);
-        if (param.id) {
-            super.setConfig(this.$defaultConfig[param.id]);
-            this.setConfig(param.config);
-        }
-        this.$rootParent = this;
+    }
+    /**
+     * initBeforeSetData
+     */
+    public initBeforeSetData(paramClone?: any) {
+        super.initBeforeSetData(paramClone);
         this.cell = null;
-    }
+        this.$rootParent = this;
+        _.objectSet(this.config, this.$dragTableConfig.IndexTheadConfig, 'union');
+        if (/top-index/.test(this.type)) {
+            _.objectSet(paramClone, this.$dragTableConfig.topIndexThead, 'union');
+        } else if (/left-index/.test(this.type)) {
+            _.objectSet(paramClone, this.$dragTableConfig.leftIndexThead, 'union');
+            this.config.style.width = '80px';
+        }
 
-
-    /**
-     * getContainerByTheadPosition
-     * 备注：获得子容器
-     * @param position: Position 相对于根容器的位置
-     *
-     */
-    public getContainerByTheadPosition(position: number[]) {
-        let res: any = this;
-        (position || []).forEach((index: number) => {
-            res = res.children[index];
-        });
-        return res;
     }
 
     /**
-     * subjectSend
+     * resize
      */
-    public subjectSend(msg: SubjectMsgInterface) {
-        this.indexTheadSubject.sendMsg(msg);
+    public resize(): void {
+        this.$leafIndexList = [];
+        this.$leafIndexList2 = [];
+        super.resize();
     }
+
+    /**
+     * replaceChild
+     */
+    public replaceChild(newChild: IndexContainer, targetIndex: number, needDeleteItChildren?: boolean): void {
+        super.replaceChild(newChild, targetIndex, needDeleteItChildren);
+        this.$positionManager.setPositionMap(newChild.position, newChild, 'last');
+    }
+
     /**
      * render
      */
-    public render() {
+    public render(): void {
         this.resize();
         this.children.forEach((th: IndexContainer, i: number) => {
             th.position.table = this.$rootTable.position.table;
-            if (!th.id
-                // || (th.id && th.id.indexOf('def_'))
-            ) {
-                th.id = 'def2.0_' + i;
-            }
             if (th.cell) {
                 if (th.type.indexOf('top') !== -1) {
                     th.position.colNum = i;
                     th.position.colStr = _.getA_Z(i);
                     th.position.rowStr = 0;
-                    // th.cell.setProperty('value', _.getA_Z(i));
                     th.cell.value = _.getA_Z(i);
-
                 } else if (th.type.indexOf('left') !== -1) {
                     // debugger
                     th.position.colStr = '@';
                     th.position.rowNum = i;
                     th.position.rowStr = i + 1;
-                    // th.cell.setProperty('value', i + 1);
                     th.cell.value = i + 1;
                 }
-                if (this.$rootTable.config.debugLevel === 1) {
-                    // th.cell.setProperty('value', th.id);
-                    th.cell.value = th.id;
-                } else if (this.$rootTable.config.debugLevel === 0) {
-                    //
+                // debugger
+                th.id = th.cell.value;
+                if (this.$rootTable.debugLevel === 1) {
+                    th.cell.value = th.renderId;
+                } else if (this.$rootTable.debugLevel === 0) {
+
                 }
                 this.$positionManager.setPositionMap(th.position, th, 'source');
                 th.cell.render();
             }
-
         });
     }
 
@@ -92,18 +84,16 @@ export class IndexThead extends IndexContainer {
      * @returns
      * @memberof BaseThead
      */
-    public createContain(data?: CellContainerInterface): IndexContainer {
+    public createContain(data?: IndexContainerInterface): IndexContainer {
         // 此处是 IndexContainer 区别与TheadContaner;
-        const $positionManagerId = this.$positionManagerId;
-        const $defConfigId = this.$defConfigId;
+        const $groupId = this.$groupId;
         const container = new IndexContainer(
             {
-                type: this.type, side1: 1, side2: 1,
+                type: this.type,
+                side1: 1, side2: 1,
                 $rootParent: this.$rootParent,
-                config: this.$rootParent.config,
                 $rootTable: this.$rootTable,
-                $defConfigId,
-                $positionManagerId,
+                $groupId
             }
         );
         // container.setConfig(this.$rootParent.config);
@@ -125,10 +115,10 @@ export class IndexThead extends IndexContainer {
     /**
      * convert
      */
-    public convert() {
+    public convert(): IndexContainerInterface[] {
         const res = new Array();
         this.children.forEach((th: IndexContainer) => {
-            const copyTh = th.clone([], ['$'], true);
+            const copyTh = th.clone(undefined, undefined, true);
             this.$positionManager.setPositionMap(copyTh.position, copyTh, 'clone');
             res.push(copyTh);
         });

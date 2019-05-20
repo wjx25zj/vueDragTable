@@ -1,7 +1,7 @@
 import { PositionInterface } from '../../interface/PositionInterface';
 import { CellContainer } from '../../viewModule/container/CellContainer';
 import * as _ from '../../utils';
-import { BaseTable } from '../../viewModule/table/BaseTable';
+import { TreeContainer } from '../../viewModule/container/TreeContainer';
 
 
 export class PositionManager {
@@ -17,10 +17,12 @@ export class PositionManager {
         }
         return instance;
     }
-    public positionMap = {
+    public positionMap: object = {
 
     };
-    public tableList = [];
+
+    public treeContainerMap: Map<any, TreeContainer> = new Map();
+    public hideContainerMap: Map<any, CellContainer> = new Map();
     public type: string;
     public $editContainer: CellContainer | null = null;
     public canFocus: boolean = true; // 是否可以获得焦点
@@ -28,35 +30,14 @@ export class PositionManager {
     constructor(type: string) {
         this.type = type;
     }
-    /**
-     * add
-     */
-    public add(table: BaseTable) {
-        let hasTable = false;
-        let insertIndex = 0;
-        this.tableList.forEach((tmpTable: BaseTable, index: number) => {
-            if (tmpTable.id === table.id) {
-                hasTable = true;
-                insertIndex = index;
-            }
-        });
-        if (!hasTable) {
-            table.position.table = this.tableList.length;
-            this.tableList.push(table);
-        } else {
-            this.tableList.splice(insertIndex, 1, table);
-            table.position.table = insertIndex;
-        }
+
+
+    public clearPositionMapById(key: any): void {
+        delete this.positionMap[key + 'clone'];
+        delete this.positionMap[key + 'last'];
+        delete this.positionMap[key + 'source'];
     }
 
-    /**
-     * render
-     */
-    public render() {
-        this.tableList.forEach((tmpTable: BaseTable) => {
-            tmpTable.render();
-        });
-    }
     /**
      * getContainer
      */
@@ -85,14 +66,14 @@ export class PositionManager {
 
 
 
-    public getTopIndexContainer(position: PositionInterface, type?: 'clone' | 'source' | 'last') {
+    public getTopIndexContainer(position: PositionInterface, type?: 'clone' | 'source' | 'last'): any {
         type = type || 'source';
         const cloneP = _.clone(position);
         cloneP.rowStr = 0;
         return this.getContainer(cloneP, type);
     }
 
-    public getLeftIndexContainer(position: PositionInterface, type?: 'clone' | 'source' | 'last') {
+    public getLeftIndexContainer(position: PositionInterface, type?: 'clone' | 'source' | 'last'): any {
         type = type || 'source';
         const cloneP = _.clone(position);
         cloneP.colStr = '@';
@@ -139,7 +120,7 @@ export class PositionManager {
     /**
      * setPositionMap
      */
-    public setPositionMap(position: PositionInterface, container: CellContainer, type?: 'clone' | 'source' | 'last') {
+    public setPositionMap(position: PositionInterface, container: CellContainer, type?: 'clone' | 'source' | 'last'): void {
         type = type || 'source';
         const copyPosition = _.clone(position);
         copyPosition.table = copyPosition.table + type;
@@ -157,7 +138,7 @@ export class PositionManager {
     /**
      * saveLastPositionMap
      */
-    public saveLastPositionMap(position: PositionInterface) {
+    public saveLastPositionMap(position: PositionInterface): object {
         const copyPosition = _.clone(position);
         const tableClone = this.positionMap[copyPosition.table + 'source'];
         for (const colStr in tableClone) {
@@ -170,7 +151,8 @@ export class PositionManager {
                         const lastPosition = _.clone(copyPosition);
                         lastPosition.colStr = colStr;
                         lastPosition.rowStr = rowStr;
-                        this.setPositionMap(lastPosition, container.clone([], ['$', 'userData']), 'last');
+                        // debugger
+                        this.setPositionMap(lastPosition, container.clone(), 'last');
                     }
                 }
 

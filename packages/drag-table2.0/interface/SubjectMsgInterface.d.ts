@@ -1,5 +1,9 @@
 export interface SubjectMsgInterface {
-    ev_type: string;
+    ev_type: 'click' | 'dbclick' | 'change' | 'blur' | 'drop' | 'paste' | 'dragStart' | 'dragOver' |
+    'dragLeave' | 'dragEnter' | 'dragEnd' | 'mouseDown' | 'middleClick' |
+    'rightClick' | 'theadAdd' | 'theadMove' | 'theadDelete' | 'theadMoveReplace' | 'theadAddReplace' |
+    'addSum' | 'delOneRowCol' | 'addParent' | 'open' | 'close' | 'error' | 'beforeRender';
+    render?: boolean;
     event: any;
     data: {
         objectName: string,

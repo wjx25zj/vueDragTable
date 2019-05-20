@@ -2,15 +2,12 @@ import { BaseThead } from '../thead/BaseThead';
 import { TheadContainer } from '../container/TheadContainer';
 import { BaseTbody } from '../tbody/BaseTbody';
 import * as _ from '../../utils/index';
-import { DragStartDataInterface } from '../../interface/DragStartData';
 import { IndexContainer } from '../container/IndexContainer';
 import { BaseCell } from '../cell/BaseCell';
-import { Subject } from '../../communication/Subject';
 import { DragTransferDataInterface } from '../../interface/DragTransferData';
 import { CellContainer } from '../container/CellContainer';
 import { IndexThead } from '../thead/IndexThead';
 import { TbodyContainer } from '../container/TbodyContainer';
-import { DefaultConfig } from '../../config/DefaultConfig';
 import { BaseTableConfig } from '../../config/BaseTableConfig';
 import { SubjectMsgInterface } from '../../interface/SubjectMsgInterface';
 import { PositionInterface } from '../../interface/PositionInterface';
@@ -19,147 +16,143 @@ import { TableContainer } from '../container/TableContainer';
 import { TheadContainerInterface } from '../../interface/viewModule/container/TheadContainer';
 import { AddDataPostionInterface } from '../../interface/viewModule/tbody/BaseTbody';
 import { TbodyContainerInterface } from '../../interface/viewModule/container/TbodyContainer';
-import { TableContainerInterface } from 'packages/drag-table2.0/interface/viewModule/container/TableContainer';
-export class BaseTable extends TableContainer {
-    public position: PositionInterface = {
-        table: 0,
-        colNum: 0,
-        rowNum: 0,
-    }; // 位置
-    // 表格的总体样式
-    public style = {
-        scrollTop: 0, // 滚动条 用于主表与上侧固定表头滚动条联动操作
-        scrollLeft: 0, // 滚动条 用于主表与左侧固定表头滚动条联动操作
-        mainTable: {
+import { BaseTableInterface } from '../../interface/viewModule/table/BaseTable';
+import { CellContainerInterface } from '../../interface/viewModule/container/CellContainer';
+import { SelectBox } from '../selectBox/SelectBox';
+import { DragTable } from '../../DragTable';
+import { TableConfigInterface } from '../../interface/config/TableConfig';
+import { TreeContainer } from '../container/TreeContainer';
 
-        },
-        topTable: {
-
-        },
-        leftTable: {
-
-        }
-
-    };
-    // public tableSubject: Subject = new Subject(); //  表格事件
-    public tableName: string = ''; // 表表格名称名
+export class BaseTable extends TableContainer implements BaseTableInterface {
     public config: BaseTableConfig; // 表格的总体设置
-    public showType: number = 0; // 表名显示类型
-    public colNumber: IndexContainer[] = new Array(); //  列标识：最上面'A', 'B', 'C', 'D'.....
-    public rowNumber: IndexContainer[] = new Array(); // 行标识: 最左边面1, 2, 3, 4, 5.....
-    public tableHeadTop: TheadContainer[] = new Array(); // 用于显示的上侧表头 直接用于上表头的渲染
-    public tableHeadLeft: TheadContainer[] = new Array(); // 用于显示的左侧表头 直接用于左表头的渲染
-    public tableBody: TbodyContainer[][] = new Array(); // 用于显示的表内容
-
-    private tableHeadTopLeft: TheadContainer = new TheadContainer({ side1: 1, side2: 1, $rootTable: this }); // 左上角空白单元格长宽
-    private theadTopEntity: BaseThead; // 上册表头实体
-    private theadLeftEntity: BaseThead; // 左册表头实体
-    private theadTopIndexEntity: IndexThead; // 上册列标识实体
-    private theadLeftIndexEntity: IndexThead; // 左册行标识实体
-    private tbodyEntity: BaseTbody; // 表内容实体
-    private keyDownSet: Set<string> = new Set(); // 键盘按键按下状态的Set
-
-
-    constructor(param: TableContainerInterface) {
-        super(param
-            // {
-            //     id,
-            //     $selectBoxId: (config && config.tableGroupId) ? config.tableGroupId : id,
-            //     $defConfigId: (config && config.tableGroupId) ? config.tableGroupId : id,
-            //     $positionManagerId: (config && config.tableGroupId) ? config.tableGroupId : id,
-            // }
-        );
-        this.$positionManager.add(this);
-        this.setConfig(this.$defaultConfig.table);
-        this.initial();
+    public $parent: DragTable;
+    public defaultExpandedIds: any[];
+    constructor(param: BaseTableInterface) {
+        super(param);
+        this.setExpandedContainer();
     }
 
-    public initial(): void {
-        const $defConfigId = this.$defConfigId;
-        const $positionManagerId = this.$positionManagerId;
-        this.theadTopEntity = new BaseThead({ id: 'topThead', type: 'top', $defConfigId, $positionManagerId, $rootTable: this, side1: 0, side2: 0 });
-        this.theadLeftEntity = new BaseThead({ id: 'leftThead', type: 'left', $defConfigId, $positionManagerId, $rootTable: this, side1: 0, side2: 0 });
-        this.theadTopIndexEntity = new IndexThead({ id: 'topIndexThead', type: 'top-index', $defConfigId, $positionManagerId, $rootTable: this, side1: 0, side2: 0 });
-        this.theadLeftIndexEntity = new IndexThead({ id: 'leftIndexThead', type: 'left-index', $defConfigId, $positionManagerId, $rootTable: this, side1: 0, side2: 0 });
-        this.tbodyEntity = new BaseTbody({ id: 'baseTbody', type: 'tbody', $defConfigId, $positionManagerId, $rootTable: this, side1: 0, side2: 0 });
-        const topLeftPositon: PositionInterface = {
-            table: this.position.table,
-            colStr: 'A',
-            rowStr: 1,
-        };
-        this.tableHeadTopLeft.position = topLeftPositon;
+    /**
+     * setDefaultExpanded
+     */
+    public setExpandedContainer(defaultExpandedIds?: any[]): void {
+        this.defaultExpandedIds = defaultExpandedIds || this.defaultExpandedIds;
+        const treeContainerMap = this.$positionManager.treeContainerMap;
+        treeContainerMap.forEach((value: TreeContainer, key: any) => {
+            value.$openStatus = 'close';
+        });
+        this.defaultExpandedIds.forEach((id: any) => {
+            let canDo: boolean = true;
+            let treeContainer = treeContainerMap.get(id);
+            if (treeContainer) {
+                do {
+                    treeContainer.$openStatus = 'open';
+                    treeContainer.$treeParent;
+                    if (treeContainer.$treeParent) {
+                        treeContainer = treeContainer.$treeParent;
+                    } else {
+                        canDo = false;
+                    }
+                } while (canDo);
+                treeContainer.resize();
+                treeContainer.loop(treeContainer.$openStatus as 'open' | 'close');
+            }
+
+        });
+        this.render();
+    }
+
+    public getAllHideContainer(): Map<any, CellContainer> {
+        return this.$positionManager.hideContainerMap;
+    }
+
+    public initBeforeSetData(paramClone?: any): void {
+        super.initBeforeSetData(paramClone);
+        _.objectSet(this.config, this.$dragTableConfig.BaseTableConfig, 'union');
+        _.objectSet(paramClone, this.$dragTableConfig.table, 'union');
+        const $groupId = this.$groupId;
+        this.$selectBoxEntity = SelectBox.getInstance(this.$groupId, this);
+        // debugger
+        // this.tableHeadTopLeft = ContainerFactory.create('TheadContainer', { style: { backgroundColor: '#fff' } });
+        this.tableHeadTopLeft = new TheadContainer({ id: 'top-left', side1: 1, side2: 1, style: { backgroundColor: '#fff' }, $groupId, $rootTable: this }); // 左上角空白单元格长宽
+        this.theadTopEntity = new BaseThead({ id: 'topThead', type: 'top', $groupId, $rootTable: this, side1: 0, side2: 0 });
+        this.theadLeftEntity = new BaseThead({ id: 'leftThead', type: 'left', $groupId, $rootTable: this, side1: 0, side2: 0 });
+        this.theadTopIndexEntity = new IndexThead({ id: 'topIndexThead', type: 'top-index', $groupId, $rootTable: this, side1: 0, side2: 0 });
+        this.theadLeftIndexEntity = new IndexThead({ id: 'leftIndexThead', type: 'left-index', $groupId, $rootTable: this, side1: 0, side2: 0 });
+        this.tbodyEntity = new BaseTbody({ id: 'baseTbody', type: 'tbody', $groupId, $rootTable: this, side1: 0, side2: 0 });
         this.initSubject(this);
+    }
+
+    /**
+     * setConfig
+     */
+    public setConfig(tableConfig: TableConfigInterface): void {
+        _.objectSet(this.config, tableConfig.table, 'union');
+        _.objectSet(this.theadTopEntity.config, tableConfig.topThead, 'union');
+        _.objectSet(this.theadLeftEntity.config, tableConfig.leftThead, 'union');
+        _.objectSet(this.theadTopIndexEntity.config, tableConfig.topIndexThead, 'union');
+        _.objectSet(this.theadLeftIndexEntity.config, tableConfig.leftIndexThead, 'union');
+        _.objectSet(this.tbodyEntity.config, tableConfig.baseTbody, 'union');
+        this.render();
+    }
+
+    /**
+     * setContainerData 反序列化
+     */
+    public setContainerData(param: BaseTableInterface): void {
+        try {
+            const copyJson = _.keepClone(param);
+            const conditionHandle = (key: string, value: any) => {
+                if (key === 'theadTopEntity') {
+                    _.objectSet(value, this.$dragTableConfig.topThead);
+                    this.theadTopEntity.setContainerData(value);
+                    return;
+                } else if (key === 'theadLeftEntity') {
+                    _.objectSet(value, this.$dragTableConfig.leftThead);
+                    this.theadLeftEntity.setContainerData(value);
+                    return;
+                } else if (key === 'theadTopIndexEntity') {
+                    _.objectSet(value, this.$dragTableConfig.topIndexThead);
+                    this.theadTopIndexEntity.setContainerData(value);
+                    return;
+                } else if (key === 'theadLeftIndexEntity') {
+                    _.objectSet(value, this.$dragTableConfig.leftIndexThead);
+                    this.theadLeftIndexEntity.setContainerData(value);
+                    return;
+                } else if (key === 'tbodyEntity') {
+                    _.objectSet(value, this.$dragTableConfig.baseTbody);
+                    this.tbodyEntity.setContainerData(value);
+                    return;
+                }
+                this.setProperty(key, value);
+            };
+            super.setContainerData(copyJson, undefined, undefined, undefined, conditionHandle);
+        } catch (error) {
+            console.error('setContainerData 中出现出错');
+            console.error(error);
+        }
+        this.initAfterSetData();
+        this.subjectSend(
+            {
+                ev_type: 'beforeRender',
+                render: true,
+                event: null,
+                data: {
+                    objectName: 'setContainerData',
+                    object: this
+                }
+            }
+        );
     }
 
     /**
      * onDestroy
      */
-    public onDestroy() {
+    public onDestroy(): void {
         const self: BaseTable = this;
-        self.theadTopEntity.theadSubject.unsubscribe(self.onReceiveMsg, self);
-        self.theadLeftEntity.theadSubject.subscribe(self.onReceiveMsg, self);
-        self.tbodyEntity.tbodySubject.subscribe(self.onReceiveMsg, self);
-    }
-
-    /**
-     * 初始化订阅事件 订阅表头变化
-     *
-     * @param {*} self
-     * @memberof BaseTable
-     */
-    public initSubject(self: BaseTable): void {
-        self = self || this;
-        if (self.theadTopEntity) {
-            self.theadTopEntity.theadSubject.subscribe(self.onReceiveMsg, self);
-        }
-        if (self.theadLeftEntity) {
-            self.theadLeftEntity.theadSubject.subscribe(self.onReceiveMsg, self);
-        }
-        if (self.tbodyEntity) {
-            self.tbodyEntity.tbodySubject.subscribe(self.onReceiveMsg, self);
-        }
-    }
-
-
-
-
-    /**
-     * setConfig
-     */
-    public setConfig(tableConfig: BaseTableConfig): void {
-        super.setConfig(tableConfig);
-        const style = {
-            // 主表样式
-            mainTable: {
-                overflow: this.config.isOverflow ? 'auto' : 'visible',
-                maxWidth: !this.config.isOverflow ? 'auto' : this.config.maxWidth,
-                maxHeight: !this.config.isOverflow ? 'auto' : this.config.maxHeight,
-            },
-            leftTable: {
-                overflow: this.config.isOverflow ? 'hidden' : 'visible',
-                height: !this.config.isOverflow ? 'auto' : 'calc(' + this.config.maxHeight + ' - 17px)',
-            },
-            // 上侧表头
-            topTable: {
-                overflow: this.config.isOverflow ? 'hidden' : 'visible',
-                maxWidth: !this.config.isOverflow ? 'auto' : 'calc(' + this.config.maxWidth + ' - 17px)',
-            },
-        };
-        _.objectSet(this.style, style, 'union');
-    }
-
-    /**
-     * setConfig
-     */
-    public setDefaultConfig(defConfig: DefaultConfig): void {
-        super.setDefaultConfig(defConfig);
-        this.setConfig(this.$defaultConfig.table);
-        this.theadTopEntity.setConfig(this.$defaultConfig.topThead);
-        this.theadLeftEntity.setConfig(this.$defaultConfig.leftThead);
-        this.theadTopIndexEntity.setConfig(this.$defaultConfig.topIndexThead);
-        this.theadLeftIndexEntity.setConfig(this.$defaultConfig.leftIndexThead);
-        this.tbodyEntity.setConfig(this.$defaultConfig.baseTbody);
-        this.render();
+        self.theadTopEntity.$subject.unsubscribe(self.onReceiveMsg, self);
+        self.theadLeftEntity.$subject.subscribe(self.onReceiveMsg, self);
+        self.tbodyEntity.$subject.subscribe(self.onReceiveMsg, self);
     }
 
     /**
@@ -180,20 +173,30 @@ export class BaseTable extends TableContainer {
         for (let i = 0; i < height; i++) {
             this.addOneRow();
         }
-        this.renderAll();
-        // this.render();
+        this.render();
     }
+
     /**
      * addOneRow 添加一行数据
      *
      * @param {*} [rowData]
      * @memberof BaseTable
      */
-    public addOneRow(rowData?: object | any[] | CellContainer[], param?: AddDataPostionInterface): string {
-        let id = null;
+    public addOneRow(params?:
+        {
+            data?: object | any[] | CellContainer[],
+            param?: AddDataPostionInterface,
+            render?: boolean;
+        }
+    ): string {
+        const param = params ? params.param : undefined;
+        const rowData = params ? params.data : undefined;
+        const render = params ? params.render : undefined;
+
+
+        let id: string = null;
         let needAddThead = false;
         let paramTheadAdd: ParamTheadAdd;
-
         const lastSelectContainer: TheadContainer = this.$selectBoxEntity.currentCotanier as TheadContainer;
         if (param) {
             paramTheadAdd = {
@@ -203,7 +206,7 @@ export class BaseTable extends TableContainer {
                 sourceContainerData: param.sourceContainerData,
             };
             needAddThead = true;
-        } else if (this.tableHeadLeft.length !== 0) {
+        } else if (this.$tableHeadLeft.length !== 0) {
             needAddThead = true;
         }
 
@@ -238,25 +241,39 @@ export class BaseTable extends TableContainer {
 
         // addTbody
         if (needAddThead) {
-            id = this.theadAdd(paramTheadAdd);
+            const addContainer = this.theadAdd(paramTheadAdd);
+            id = addContainer.id;
         }
 
         const container = this.theadLeftIndexEntity.createContain();
         this.theadLeftIndexEntity.addChild(container);
         id = this.tbodyEntity.setRowData(id, rowData || {});
-        container.id = id;
-        this.renderAll();
+        container.renderId = id;
+        if (render !== false) {
+            this.render();
+        }
         return id;
     }
 
     /**
      * addOneCol 添加一列数据
      *
-     * @param {*} [rowData]
+     * @param {*} [data]
      * @memberof BaseTable
      */
-    public addOneCol(colData?: object | any[] | CellContainer[], param?: AddDataPostionInterface): string {
-        let id = null;
+    public addOneCol(
+        params?:
+            {
+                data?: object | any[] | CellContainer[],
+                param?: AddDataPostionInterface,
+                render?: boolean;
+            }
+    ): string {
+        const param = params ? params.param : undefined;
+        const colData = params ? params.data : undefined;
+        const render = params ? params.render : undefined;
+
+        let id: string = null;
         let needAddThead = false;
         let paramTheadAdd: ParamTheadAdd;
         const lastSelectContainer: TheadContainer = this.$selectBoxEntity.currentCotanier as TheadContainer;
@@ -269,7 +286,7 @@ export class BaseTable extends TableContainer {
                 sourceContainerData: param.sourceContainerData,
             };
             needAddThead = true;
-        } else if (this.tableHeadTop.length !== 0) {
+        } else if (this.$tableHeadTop.length !== 0) {
             needAddThead = true;
         }
 
@@ -303,39 +320,25 @@ export class BaseTable extends TableContainer {
         }
 
         if (needAddThead) {
-            id = this.theadAdd(paramTheadAdd);
+            const addContainer = this.theadAdd(paramTheadAdd);
+            id = addContainer.id;
         }
 
         const container = this.theadTopIndexEntity.createContain();
         id = this.tbodyEntity.setColData(id, colData || {});
-        container.id = id;
+        container.renderId = id;
         this.theadTopIndexEntity.addChild(container);
-        this.renderAll();
+        if (render !== false) {
+            this.render();
+        }
         return id;
     }
 
     /**
      * setTBodyData
      */
-    public setTbodyData(data: object | Array<TbodyContainerInterface[] | object>) {
-        try {
-            if (Array.isArray(data)) {
-                data.forEach((rowData: object | any[], i: number) => {
-                    const leftId = this.tbodyEntity.leftIndexList[i].id;
-                    this.tbodyEntity.setRowData(leftId, rowData);
-                });
-            } else if (typeof data === 'object') {
-                for (const leftId in data) {
-                    if (data.hasOwnProperty(leftId)) {
-                        this.tbodyEntity.setRowData(leftId, data[leftId]);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(error);
-            console.error('输入数据格式有误');
-        }
-        this.renderAll();
+    public setTbodyData(data: object | Array<TbodyContainerInterface[] | object>): void {
+        this.tbodyEntity.setTbodyData(data);
     }
 
     /**
@@ -344,26 +347,35 @@ export class BaseTable extends TableContainer {
      * @param {ParamTheadAddReplace} param
      * @memberof BaseTable
      */
-    public theadAddPlace(param: ParamTheadAddReplace, sendMsg?: boolean): void {
+    public theadAddReplace(param: ParamTheadAddReplace, render?: boolean): void {
         const targetContainerPosition = param.targetContainerPosition;
         const targetThead: BaseThead = this.getEntity(param.type);
         const targetIndexPosition = _.last(targetContainerPosition);
         const targetParentPosition = _.dropRight(targetContainerPosition);
         const targetParentContainer = targetThead.getContainerByTheadPosition(targetParentPosition);
         if (param.sourceContainerData) {
+            if (param.withChildren == false) {
+                param.sourceContainerData.children = new Array();
+            }
+            const tmpContainer = targetThead.createContain(param.sourceContainerData);
+            targetParentContainer.replaceChild(tmpContainer, targetIndexPosition, param.targetWithChildren);
+        }
+
+        if (param.sourceContainerData) {
             const tmpContainer = targetThead.createContain(param.sourceContainerData);
             targetParentContainer.replaceChild(tmpContainer, targetIndexPosition, param.withChildren);
         }
-        if (sendMsg !== false) {
-            this.onReceiveMsg({
-                ev_type: 'theadAddPlace',
-                event: null,
-                data: {
-                    objectName: 'ParamTheadAddReplace',
-                    object: param
-                }
-            });
-        }
+
+        this.onReceiveMsg({
+            ev_type: 'theadAddReplace',
+            event: null,
+            render,
+            data: {
+                objectName: 'ParamTheadAddReplace',
+                object: param
+            }
+        });
+
     }
 
     /**
@@ -372,8 +384,10 @@ export class BaseTable extends TableContainer {
      * @param {ParamTheadAdd} param
      * @memberof BaseTable
      */
-    public theadAdd(param: ParamTheadAdd, sendMsg?: boolean): any {
+    public theadAdd(param: ParamTheadAdd, render?: boolean): any {
+        // debugger
         let id = null;
+        let addContainer: TheadContainer;
         try {
             if (!param.sourceContainerData) {
                 param.sourceContainerData = {
@@ -382,21 +396,23 @@ export class BaseTable extends TableContainer {
                     },
                 };
             }
+            if (param.withChildren == false) {
+                param.sourceContainerData.children = new Array();
+            }
             const targetThead: BaseThead = this.getEntity(param.type);
             const targetParentContainer = targetThead.getContainerByTheadPosition(param.targetParentPosition) as TheadContainer;
-            const tmpContainer = targetThead.createContain(param.sourceContainerData);
-            id = targetParentContainer.addChild(tmpContainer, param.insertIndex);
-            targetThead.resize();
-            if (sendMsg !== false) {
-                this.onReceiveMsg({
-                    ev_type: 'theadAdd',
-                    event: null,
-                    data: {
-                        objectName: 'ParamTheadAdd',
-                        object: param
-                    }
-                });
-            }
+            addContainer = targetThead.createContain(param.sourceContainerData);
+            id = targetParentContainer.addChild(addContainer, param.insertIndex);
+            // targetThead.resize();
+            this.onReceiveMsg({
+                ev_type: 'theadAdd',
+                event: null,
+                render,
+                data: {
+                    objectName: 'ParamTheadAdd',
+                    object: param
+                }
+            });
         } catch (error) {
             console.error(error);
             this.onReceiveMsg({
@@ -408,7 +424,7 @@ export class BaseTable extends TableContainer {
                 }
             });
         }
-        return id;
+        return addContainer;
     }
 
     /**
@@ -417,7 +433,7 @@ export class BaseTable extends TableContainer {
      * @param {ParamTheadMove} param
      * @memberof BaseTable
      */
-    public theadMove(param: ParamTheadMove, sendMsg?: boolean): void {
+    public theadMove(param: ParamTheadMove, render?: boolean): void {
 
         try {
             const souceIndexPosition = _.last(param.sourceContainerData.theadPosition);
@@ -448,16 +464,17 @@ export class BaseTable extends TableContainer {
                 targetThead.resize();
                 sourceThead.resize();
             }
-            if (sendMsg !== false) {
-                this.onReceiveMsg({
-                    ev_type: 'theadMove',
-                    event: null,
-                    data: {
-                        objectName: 'ParamTheadMove',
-                        object: param
-                    }
-                });
-            }
+
+            this.onReceiveMsg({
+                ev_type: 'theadMove',
+                render,
+                event: null,
+                data: {
+                    objectName: 'ParamTheadMove',
+                    object: param
+                }
+            });
+
 
         } catch (error) {
             this.onReceiveMsg({
@@ -478,7 +495,7 @@ export class BaseTable extends TableContainer {
      * @param {ParamTheadDelete} param
      * @memberof BaseTable
      */
-    public theadDelete(param?: ParamTheadDelete, sendMsg?: boolean): void {
+    public theadDelete(param?: ParamTheadDelete, render?: boolean): void {
         try {
             let targetContainerPosition: number[];
             let targetIndexPosition: number;
@@ -514,16 +531,17 @@ export class BaseTable extends TableContainer {
                 const targetParentContainer = targetThead.getContainerByTheadPosition(targetParentPosition) as TheadContainer;
                 targetParentContainer.deletChild(targetIndexPosition, 1, withChildren);
                 targetThead.resize();
-                if (sendMsg !== false) {
-                    this.onReceiveMsg({
-                        ev_type: 'theadDelete',
-                        event: null,
-                        data: {
-                            objectName: 'ParamTheadDelete',
-                            object: param
-                        }
-                    });
-                }
+
+                this.onReceiveMsg({
+                    ev_type: 'theadDelete',
+                    render,
+                    event: null,
+                    data: {
+                        objectName: 'ParamTheadDelete',
+                        object: param
+                    }
+                });
+
             } else {
                 console.error('theadDelete 未传入参数');
             }
@@ -546,7 +564,7 @@ export class BaseTable extends TableContainer {
      * @param {ParamTheadMoveReplace} param
      * @memberof BaseTable
      */
-    public theadMoveReplace(param: ParamTheadMoveReplace, sendMsg?: boolean): void {
+    public theadMoveReplace(param: ParamTheadMoveReplace, render?: boolean): void {
         try {
             const targetContainerPosition = param.targetContainerPosition;
             const targetIndexPosition = _.last(targetContainerPosition);
@@ -570,16 +588,15 @@ export class BaseTable extends TableContainer {
                 if (sourceThead !== targetThead) {
                     sourceThead.resize();
                 }
-                if (sendMsg !== false) {
-                    this.onReceiveMsg({
-                        ev_type: 'theadMoveReplace',
-                        event: null,
-                        data: {
-                            objectName: 'ParamTheadMoveReplace',
-                            object: param
-                        }
-                    });
-                }
+                this.onReceiveMsg({
+                    ev_type: 'theadMoveReplace',
+                    event: null,
+                    render,
+                    data: {
+                        objectName: 'ParamTheadMoveReplace',
+                        object: param
+                    }
+                });
             }
         } catch (error) {
             this.onReceiveMsg({
@@ -600,7 +617,7 @@ export class BaseTable extends TableContainer {
     /**
      * addSum
      */
-    public addSum(newParentContainData?: TheadContainerInterface, param?: AddDataPostionInterface) {
+    public addSum(newParentContainData?: TheadContainerInterface, param?: AddDataPostionInterface): void {
         const mustContainerData: TheadContainerInterface = {
             tbodyConfig: {
                 container: {
@@ -618,7 +635,7 @@ export class BaseTable extends TableContainer {
             },
             id: 'sum' + '_' + _.guid(),
             canSum: true,
-        };
+        } as any;
         const addParam: any = {
             sourceContainerData: {
                 cell: {
@@ -641,7 +658,17 @@ export class BaseTable extends TableContainer {
         }
         _.objectSet(addParam.sourceContainerData, mustContainerData, 'union');
         this.theadAdd(addParam);
-        this.renderAll();
+        this.subjectSend(
+            {
+                ev_type: 'beforeRender',
+                render: true,
+                event: null,
+                data: {
+                    objectName: 'addSum',
+                    object: null
+                }
+            }
+        );
     }
 
 
@@ -652,7 +679,7 @@ export class BaseTable extends TableContainer {
      * @param {string} delType  'row' | 'col'
      * @memberof BaseTable
      */
-    public delOneRowCol(delType: 'row' | 'col', container?: CellContainer): void {
+    public delOneRowCol(delType: 'row' | 'col', container?: CellContainerInterface): void {
 
         const lastSelectContainer: TheadContainer = this.$selectBoxEntity.currentCotanier as TheadContainer;
         container = container || lastSelectContainer;
@@ -712,27 +739,17 @@ export class BaseTable extends TableContainer {
             delContainerWithParentWhoHasNoChild(needDelTheadContainer);
         }
 
-        this.renderAll();
-    }
-
-
-    /**
-     * 获得表头实体
-     *
-     * @protected
-     * @param {string} type
-     * @returns
-     *
-     */
-    public getEntity(type: 'left' | 'top' | 'left-index' | 'top-index' | 'tbody' | string): any {
-        switch (type) {
-            case 'top': return this.theadTopEntity;
-            case 'left': return this.theadLeftEntity;
-            case 'top-index': return this.theadTopIndexEntity;
-            case 'left-index': return this.theadLeftIndexEntity;
-            case 'tbody': return this.tbodyEntity; // 双击编辑表格时 为了统一失去焦点后的函数
-            default: console.log('getEntity-default'); return this.theadTopEntity;
-        }
+        this.subjectSend(
+            {
+                ev_type: 'delOneRowCol',
+                event: null,
+                render: true,
+                data: {
+                    objectName: 'delOneRowCol',
+                    object: null
+                }
+            }
+        );
     }
 
 
@@ -743,16 +760,10 @@ export class BaseTable extends TableContainer {
      * @returns
      * @memberof BaseTable
      */
-    public getTbodyData(outPutType?: number): any {
-        let res = {};
-        switch (outPutType) {
-            case 0:
-                res = this.tbodyEntity.output();
-                break;
-            default:
-                res = this.tbodyEntity.output();
-        }
-        // console.log(res);
+    public getTbodyData(outPutType?: 'objectData' | 'arrayObjectData' | 'arrayArrayData', valueType?: 'content' | 'container'): any {
+        outPutType = outPutType || 'arrayObjectData';
+        valueType = valueType || 'content';
+        const res = this.tbodyEntity.output(valueType)[outPutType];
         return res;
     }
 
@@ -762,7 +773,10 @@ export class BaseTable extends TableContainer {
      *
      * @memberof BaseTable
      */
-    public render() {
+    public render(): void {
+        // debugger
+        // console.log('render');
+        this.$positionManager.hideContainerMap.clear();
         this.resizeTable();
         this.indexTheadRender();
         const theadTopHeight = this.theadTopEntity.side2;
@@ -771,19 +785,19 @@ export class BaseTable extends TableContainer {
             const topBasePosition: PositionInterface = _.clone(this.position);
             topBasePosition.colNum = theadLeftWidth;
             topBasePosition.rowNum = 0;
-            this.tableHeadTop = this.theadTopEntity.convert2TheadTopList(topBasePosition);
+            this.$tableHeadTop = this.theadTopEntity.convert2TheadTopList(topBasePosition);
         }
-        if (this.config.hasLeftThead) {
+        if (this.theadLeftEntity) {
             const leftBasePosition: PositionInterface = _.clone(this.position);
             leftBasePosition.colNum = 0;
             leftBasePosition.rowNum = theadTopHeight;
-            this.tableHeadLeft = this.theadLeftEntity.convert2TheadLeftList(leftBasePosition);
+            this.$tableHeadLeft = this.theadLeftEntity.convert2TheadLeftList(leftBasePosition);
         }
         const topLeftCell = new BaseCell({ value: this.id, $parent: this.tableHeadTopLeft });
-        this.tableHeadTopLeft.style.width = this.theadLeftEntity.widthNum + 'px';
-        this.tableHeadTopLeft.widthNum = this.theadLeftEntity.widthNum;
-        this.tableHeadTopLeft.style.height = this.theadTopEntity.heightNum + 'px';
-        this.tableHeadTopLeft.heightNum = this.theadTopEntity.heightNum;
+        // debugger
+        this.tableHeadTopLeft.widthSelfNum = this.theadLeftEntity.widthNum;
+        this.tableHeadTopLeft.heightSelfNum = this.theadTopEntity.heightNum;
+        this.tableHeadTopLeft.resize();
         this.tableHeadTopLeft.setCell(topLeftCell);
         topLeftCell.render();
         if (theadTopHeight > 0 && theadLeftWidth > 0) {
@@ -799,63 +813,17 @@ export class BaseTable extends TableContainer {
     /**
      * serialize 序列化
      */
-    public serialize(): object {
-        const Table: any = {};
+    public clone(): BaseTableInterface {
+        let Table: any = {};
         try {
-            for (const key in this) {
-                if (this.hasOwnProperty(key)) {
-                    // console.log(key);
-                    const value: any = this[key];
-                    if (Array.isArray(value) || /\$/.test(key)) {
-                        continue;
-                    } else if (typeof value === 'object') {
-                        if (key.indexOf('Subject') !== -1) {
-                            continue;
-                        } else if ((key === 'keyDownSet')) {
-                            // Table[key] = Array.from(this[key] as any);
-                        } else if (value.EPI_READY) {
-                            Table[key] = value.clone(['Subject', '$'], ['userData']);
-                        } else {
-                            Table[key] = this[key];
-                        }
-                    } else {
-                        Table[key] = this[key];
-                    }
-                }
-            }
-
+            Table = super.clone(/\$/, /userData/);
         } catch (error) {
-            console.error('serialize 中出现出错');
+            console.error('clone 中出现出错');
             console.error(error);
         }
         return Table;
     }
 
-    /**
-     * deserialize 反序列化
-     */
-    public deserialize(tableJson: object) {
-        const copyJson = _.clone(tableJson);
-        const self: any = this;
-        try {
-            for (const key in copyJson) {
-                if (copyJson.hasOwnProperty(key)) {
-                    const val = copyJson[key];
-                    if (val.EPI_READY) {
-                        (self[key] as any).setContainerData(val);
-                    } else if (key === '$selectBoxEntity' || key === 'keyDownSet') {
-                        // self[key] = new Set((tableJson as any)[key]);
-                    } else {
-                        self[key] = val;
-                    }
-                }
-            }
-            this.renderAll();
-        } catch (error) {
-            console.error('Deserialize 中出现出错');
-            console.error(error);
-        }
-    }
 
 
     /**
@@ -866,8 +834,16 @@ export class BaseTable extends TableContainer {
      */
     public addParent(newParentContainData?: TheadContainerInterface): void {
         let fristContainer: TheadContainer;
+        const containerList = this.$selectBoxEntity.selectList;
+        this.onReceiveMsg({
+            ev_type: 'addParent',
+            event: null,
+            data: {
+                objectName: 'selectContainer',
+                object: containerList
+            }
+        });
         if (this.$selectBoxEntity.size > 0) {
-            const containerList = this.$selectBoxEntity.selectList;
             fristContainer = containerList[0] as TheadContainer;
             const isSameParent = this.isSameParent(containerList);
             if (isSameParent && fristContainer) {
@@ -911,102 +887,31 @@ export class BaseTable extends TableContainer {
                     sourceContainerData: tmpContainer,
                 });
                 // debugger
-                this.renderAll();
+                this.subjectSend(
+                    {
+                        ev_type: 'beforeRender',
+                        render: true,
+                        event: null,
+                        data: {
+                            objectName: 'addParent',
+                            object: this
+                        }
+                    }
+                );
             }
         }
         this.$selectBoxEntity.clear();
     }
 
     /**
-     * 按键抬起
-     *
-     * @param {*} ev
-     * @memberof BaseTable
+     * 获得叶子节点1
      */
-    public onKeyUp(ev: any): void {
-        this.keyDownSet.delete(ev.key);
-    }
-
-    /**
-     * 按键按下
-     *
-     * @param {*} ev
-     * @memberof BaseTable
-     */
-    public onKeyDown(ev: any) {
-        console.log(ev.key);
-        this.keyDownSet.add(ev.key);
-    }
-
-    /**
-     * dragLeave
-     */
-    public dragLeave(ev: any, th: TheadContainer) {
-        const type = th.type.indexOf('top') !== -1 ? 'top' : 'left';
-        const theadEntity: BaseThead = this.getEntity(type);
-        theadEntity.dragLeave(ev, th);
-    }
-
-
-    /**
-     * dragStart 事件
-     */
-    public dragStart(ev: any, th: TheadContainer) {
-        const theadEntity = this.getEntity(th.type);
-        const dragStartData: DragStartDataInterface = {
-            operationType: 'move',
-            containerData: th,
-        };
-        theadEntity.dragStart(ev, dragStartData);
-    }
-
-    /**
-     * dragEnd
-     */
-    public dragEnd(ev: any, th: TheadContainer) {
-        const theadEntity = this.getEntity(th.type);
-        theadEntity.dragStartData = null;
-    }
-
-    /**
-     * dragOver事件
-     */
-    public dragOver(ev: any, th?: TheadContainer) {
-        if (th) {
-            const type = th.type.indexOf('top') !== -1 ? 'top' : 'left';
-            const theadEntity: BaseThead = this.getEntity(type);
-            if (theadEntity.dragStartData) {
-                // 悬停在自己上面 不处理
-                if (th !== theadEntity.dragStartData.containerData) {
-                    theadEntity.dragOver(ev, th);
-                }
-            } else {
-                theadEntity.dragOver(ev, th);
-            }
-        } else {
-            ev.preventDefault();
-        }
-    }
-
-    /**
-     * 拖拽drop事件
-     */
-    public drop(ev: any, th?: TheadContainer) {
-        if (th) {
-            const type = th.type.indexOf('top') !== -1 ? 'top' : 'left';
-            const theadEntity = this.getEntity(type);
-            theadEntity.drop(ev, th);
-        }
-    }
-
-    /**
-     * getTheadLe
-     */
-    public getTheadLeavesList1(theadType: 'top' | 'left'): TheadContainer[] | null {
+    public getTheadLeavesList1(theadType: 'top' | 'left'): TheadContainerInterface[] | null {
         let res = null;
         try {
             const Entity = this.getEntity(theadType) as BaseThead;
-            res = Entity.leafIndexList;
+            Entity.resize();
+            res = Entity.$leafIndexList;
         } catch (error) {
             console.error('获取错误');
         }
@@ -1035,7 +940,17 @@ export class BaseTable extends TableContainer {
                         });
                     }
                 });
-                this.renderAll();
+                this.subjectSend(
+                    {
+                        ev_type: 'beforeRender',
+                        render: true,
+                        event: null,
+                        data: {
+                            objectName: 'merge',
+                            object: this
+                        }
+                    }
+                );
             } else {
                 return;
             }
@@ -1048,15 +963,8 @@ export class BaseTable extends TableContainer {
      * @protected
      * @memberof BaseTable
      */
-    protected disMerge() {
-        this.$selectBoxEntity.forEach((th: CellContainer, i: any) => {
-            if ((th as TheadContainer).mergeList.length > 0) {
-                const theadEntity = this.getEntity(th.type);
-                theadEntity.disMerge(th);
-            }
-        });
-        this.$selectBoxEntity.clear();
-        this.renderAll();
+    public disMerge() {
+
     }
 
 
@@ -1068,24 +976,10 @@ export class BaseTable extends TableContainer {
      * @returns
      * @memberof BaseTable
      */
-    private canMerge() {
+    private canMerge(): boolean {
         const containerList = this.$selectBoxEntity.selectList;
         const isSameParent = this.isSameParent(containerList);
         return isSameParent;
-    }
-
-
-
-    /**
-     * 滚动事件 调整scrollTop scrollLeft
-     *
-     * @private
-     * @param {*} ev
-     * @memberof BaseTable
-     */
-    private onScroll(ev: any) {
-        this.style.scrollTop = ev.srcElement.scrollTop;
-        this.style.scrollLeft = ev.srcElement.scrollLeft;
     }
 
 
@@ -1094,15 +988,11 @@ export class BaseTable extends TableContainer {
      *
      * @memberof DefaultTable
      */
-    private renderTBody() {
-        this.tbodyEntity.topIndexList = this.colNumber.slice(0 + this.theadLeftEntity.side2, this.colNumber.length);
-        if (this.config.hasLeftThead) {
-            this.tbodyEntity.leftIndexList = this.rowNumber.slice(0 + this.theadTopEntity.side2, this.rowNumber.length);
-        } else {
-            this.tbodyEntity.leftIndexList = this.rowNumber.slice(0 + this.theadTopEntity.side2, this.rowNumber.length);
-        }
+    private renderTBody(): void {
+        this.tbodyEntity.topIndexList = this.$colNumber.slice(0 + this.theadLeftEntity.side2, this.$colNumber.length);
+        this.tbodyEntity.leftIndexList = this.$rowNumber.slice(0 + this.theadTopEntity.side2, this.$rowNumber.length);
         this.tbodyEntity.render();
-        this.tableBody = this.tbodyEntity.convert();
+        this.$tableBody = this.tbodyEntity.convert();
     }
 
     /**
@@ -1110,13 +1000,13 @@ export class BaseTable extends TableContainer {
      *
      * @memberof DefaultTable
      */
-    private resizeTable() {
+    private resizeTable(): void {
         this.theadTopEntity.resize();
         this.theadLeftEntity.resize();
         this.theadTopIndexEntity.resize();
         this.theadLeftIndexEntity.resize();
-        let maxWidth;
-        let maxHeight;
+        let maxWidth: number;
+        let maxHeight: number;
         const theadTopWidth = this.theadTopEntity.side1;
         const theadTopHeight = this.theadTopEntity.side2;
         const theadLeftHeight = this.theadLeftEntity.side1;
@@ -1130,7 +1020,7 @@ export class BaseTable extends TableContainer {
                 this.theadTopIndexEntity.deletChild(theadLeftWidth, topIndexWidth, true);
                 this.theadTopIndexEntity.resize();
                 topIndexWidth = this.theadTopIndexEntity.side1;
-                this.theadTopEntity.leafIndexList.forEach((th: TheadContainer, i: number) => {
+                this.theadTopEntity.$leafIndexList.forEach((th: TheadContainer, i: number) => {
                     const index = i + theadLeftWidth;
                     const container = this.theadTopIndexEntity.createContain();
                     const thContainer = this.theadTopEntity.getContainerByTheadPosition(th.theadPosition);
@@ -1143,17 +1033,18 @@ export class BaseTable extends TableContainer {
                     }
                 });
             } else {
+                // console.log(this.theadTopIndexEntity.children);
                 this.theadTopIndexEntity.children.forEach((th: IndexContainer, i: number) => {
                     if (i + 1 <= theadLeftWidth) {
-                        const theadContainer: TheadContainer = this.theadLeftEntity.leafIndexList2[i];
+                        const theadContainer: TheadContainer = this.theadLeftEntity.$leafIndexList2[i];
                         const container = this.theadTopIndexEntity.createContain();
                         container.update(theadContainer);
-                        if (/tbody/.test(th.id)) {
+                        if (/tbody/.test(th.renderId)) {
                             this.theadTopIndexEntity.addChild(container, i);
                         } else {
                             this.theadTopIndexEntity.replaceChild(container, i);
                         }
-                    } else if ((i + 1) > theadLeftWidth && !/tbody/.test(th.id)) {
+                    } else if ((i + 1) > theadLeftWidth && !/tbody/.test(th.renderId)) {
                         this.theadTopIndexEntity.deletChild(i, 1, true);
                     }
                 });
@@ -1168,7 +1059,7 @@ export class BaseTable extends TableContainer {
                 leftIndexHeight = this.theadLeftIndexEntity.side1;
                 // console.log(this.theadLeftEntity);
 
-                this.theadLeftEntity.leafIndexList.forEach((th: TheadContainer, i: number) => {
+                this.theadLeftEntity.$leafIndexList.forEach((th: TheadContainer, i: number) => {
                     const index = i + theadTopHeight;
                     const container = this.theadLeftIndexEntity.createContain();
                     // console.log(this.theadLeftEntity);
@@ -1184,15 +1075,15 @@ export class BaseTable extends TableContainer {
             } else {
                 this.theadLeftIndexEntity.children.forEach((th: IndexContainer, i: number) => {
                     if (i + 1 <= theadTopHeight) {
-                        const theadContainer: TheadContainer = this.theadTopEntity.leafIndexList2[i];
+                        const theadContainer: TheadContainer = this.theadTopEntity.$leafIndexList2[i];
                         const container = this.theadLeftIndexEntity.createContain();
                         container.update(theadContainer);
-                        if (/tbody/.test(th.id)) {
+                        if (/tbody/.test(th.renderId)) {
                             this.theadLeftIndexEntity.addChild(container, i);
                         } else {
                             this.theadLeftIndexEntity.replaceChild(container, i);
                         }
-                    } else if ((i + 1) > theadTopHeight && !/tbody/.test(th.id)) {
+                    } else if ((i + 1) > theadTopHeight && !/tbody/.test(th.renderId)) {
                         this.theadLeftIndexEntity.deletChild(i, 1, true);
                     }
                 });
@@ -1205,13 +1096,14 @@ export class BaseTable extends TableContainer {
             if (maxWidth) {
                 for (let colIndex = 0; colIndex < theadLeftWidth; colIndex++) {
                     const originalColTh: IndexContainer = this.theadTopIndexEntity.getContainerByTheadPosition([colIndex]);
-                    const thContainer = this.theadLeftEntity.leafIndexList2[colIndex];
+                    const thContainer = this.theadLeftEntity.$leafIndexList2[colIndex];
                     const container = this.theadTopIndexEntity.createContain();
                     container.update(thContainer);
-                    if (colIndex + 1 > topIndexWidth || /tbody/.test(originalColTh.id)) {
-                        this.theadTopIndexEntity.addChild(container);
+                    if (colIndex + 1 > topIndexWidth || /tbody/.test(originalColTh.renderId)) {
+                        this.theadTopIndexEntity.addChild(container, colIndex);
                     } else {
                         this.theadTopIndexEntity.replaceChild(container, colIndex);
+                        // this.$positionManager.setPositionMap(container.position, container, 'last');
                     }
                 }
                 resizeTableWidth();
@@ -1227,10 +1119,10 @@ export class BaseTable extends TableContainer {
             if (maxHeight) {
                 for (let rowIndex = 0; rowIndex < theadTopHeight; rowIndex++) {
                     const originalRowTh: IndexContainer = this.theadLeftIndexEntity.getContainerByTheadPosition([rowIndex]);
-                    const thContainer = this.theadTopEntity.leafIndexList2[rowIndex];
+                    const thContainer = this.theadTopEntity.$leafIndexList2[rowIndex];
                     const container = this.theadLeftIndexEntity.createContain();
                     container.update(thContainer);
-                    if (rowIndex + 1 > leftIndexHeight || /tbody/.test(originalRowTh.id)) {
+                    if (rowIndex + 1 > leftIndexHeight || /tbody/.test(originalRowTh.renderId)) {
                         this.theadLeftIndexEntity.addChild(container, rowIndex);
                     } else {
                         this.theadLeftIndexEntity.replaceChild(container, rowIndex);
@@ -1253,14 +1145,14 @@ export class BaseTable extends TableContainer {
      * @returns
      * @memberof BaseTable
      */
-    private afterDrop(msg: DragTransferDataInterface) {
+    private dropHandle(msg: DragTransferDataInterface): void {
         if (msg) {
             let position: number[] = [];
             let insertIndex = null;
             let targetWithChildren = msg.target.withChildren;
             let sourceWithChildren = msg.source.withChildren;
-            const targetContainer: TheadContainerInterface = msg.target.containerData;
-            const sourceContainer: TheadContainerInterface = msg.source.containerData;
+            let targetContainer: TheadContainerInterface = msg.target.containerData;
+            let sourceContainer: TheadContainerInterface = msg.source.containerData;
             let operationType = msg.operationType;
             if (sourceWithChildren === undefined && sourceContainer.children && sourceContainer.children.length !== 0) {
                 const r = window.confirm('整组移动？');
@@ -1275,11 +1167,11 @@ export class BaseTable extends TableContainer {
                 if (/replace/.test(operationType)) {
                     // do nothing
                 } else if (targetContainer.cell && targetContainer.cell.value) {
-                    const r = window.confirm('该单元格已存在数据，是否替换？');
+                    const r = window.confirm('该单元格已有数据,替换请按确定，放弃请按取消');
                     if (r === true) {
                         operationType += '-replace';
                     } else {
-                        return;
+                        return false;
                     }
                 } else {
                     operationType += '-replace';
@@ -1317,7 +1209,9 @@ export class BaseTable extends TableContainer {
                         } as ParamTheadMove | ParamTheadAdd
                     });
                 }
-
+                // this.render();
+                // return;
+                this.getEntity(targetContainer.type).resize();
                 // 再将targetContainer移动到sourceContainer2或者sourceContainer2根节点下面
                 const source2ParentPosition = sourceContainerSource ? sourceContainerSource.theadPosition : targetContainer1Position;
                 if (sourceWithChildren) {
@@ -1332,13 +1226,19 @@ export class BaseTable extends TableContainer {
                     }
                 }
                 {
-                    this.theadMove({
-                        type: targetContainer.type,
-                        targetParentPosition: source2ParentPosition,
-                        sourceContainerData: targetContainer,
-                        insertIndex: 0,  // ?
-                        withChildren: true
-                    }, false);
+
+                    operationType = 'move';
+                    position = source2ParentPosition;
+                    sourceContainer = targetContainer;
+                    insertIndex = 0;
+                    sourceWithChildren = true;
+                    // this.theadMove({
+                    //     type: targetContainer.type,
+                    //     targetParentPosition: source2ParentPosition,
+                    //     sourceContainerData: targetContainer,
+                    //     insertIndex: 0,  // ?
+                    //     withChildren: true
+                    // }, false);
                 }
             };
 
@@ -1352,14 +1252,19 @@ export class BaseTable extends TableContainer {
                         insertIndex = _.last(targetContainer.theadPosition) + 1; break;
                     case 'top':
                         handleTop();
-                        return;
+                        // return;
+                        break;
                     case 'bottom':
                         position = targetContainer.theadPosition;
                         insertIndex = null; break;
                     case 'inner':
-                        handleInner();
+                        const res = handleInner();
+                        if (false === res) {
+                            return;
+                        }
                         break;
                     default:
+                        targetContainer = this.theadTopEntity;
                         position = targetContainer.theadPosition;
                         insertIndex = null;
                         break;
@@ -1374,29 +1279,47 @@ export class BaseTable extends TableContainer {
                         insertIndex = _.last(targetContainer.theadPosition) + 1; break;
                     case 'left':
                         handleTop();
-                        return;
+                        // return;
+                        break;
                     case 'right':
                         position = targetContainer.theadPosition;
                         insertIndex = null; break;
                     case 'inner':
-                        handleInner(); break;
+                        const res = handleInner();
+                        if (false === res) {
+                            return;
+                        }
+                        break;
                     default:
+                        targetContainer = this.theadLeftEntity;
                         position = targetContainer.theadPosition;
                         insertIndex = null;
+
                         break;
                 }
             }
+
             this.processThead({
                 operationType,
                 param: {
                     type: targetContainer.type,
                     insertIndex,
-                    withChildren: targetWithChildren,
+                    withChildren: sourceWithChildren,
+                    targetWithChildren,
                     targetParentPosition: position,
                     sourceContainerData: sourceContainer,
                     targetContainerPosition: targetContainer.theadPosition
                 }
             } as ProcessTheadInterface);
+            this.onReceiveMsg({
+                ev_type: 'beforeRender',
+                event: null,
+                render: true,
+                data: {
+                    objectName: 'BaseTable',
+                    object: this
+                }
+            });
         }
     }
 
@@ -1416,7 +1339,7 @@ export class BaseTable extends TableContainer {
      * @returns
      * @memberof BaseTable
      */
-    private isSameParent(containerList: TheadContainer[]) {
+    private isSameParent(containerList: TheadContainer[]): boolean {
         let lastContainer: TheadContainer;
         let isSameParentSet = true;
         containerList.forEach((th: TheadContainer) => {
@@ -1442,8 +1365,8 @@ export class BaseTable extends TableContainer {
     private indexTheadRender(): void {
         this.theadLeftIndexEntity.render();
         this.theadTopIndexEntity.render();
-        this.colNumber = this.theadTopIndexEntity.convert();
-        this.rowNumber = this.theadLeftIndexEntity.convert();
+        this.$colNumber = this.theadTopIndexEntity.convert();
+        this.$rowNumber = this.theadLeftIndexEntity.convert();
     }
 
     /**
@@ -1453,11 +1376,16 @@ export class BaseTable extends TableContainer {
      * @memberof BaseTable
      */
     private onReceiveMsg(msg: SubjectMsgInterface) {
-        this.subjectSend(msg);
+        const resultList = this.subjectSend(msg);
+        if (/cancel/.test(resultList.join('-'))) {
+            return resultList;
+        }
+        if (!this.$parent && msg.render) {
+            this.render();
+        }
         switch (msg.ev_type) {
             case 'drop':
-                this.afterDrop(msg.data.object);
-                this.renderAll();
+                this.dropHandle(msg.data.object);
                 break;
             case 'click':
                 this.afterContainerClick(msg.event, msg.data.object);
@@ -1466,12 +1394,8 @@ export class BaseTable extends TableContainer {
                 this.afterContainerRClick(msg.event, msg.data.object);
                 break;
             default:
-
         }
-        if (this.config.renderEvent.indexOf(msg.ev_type) !== -1) {
-            this.renderAll();
-        }
-
+        return resultList;
     }
 
     /**
@@ -1485,7 +1409,7 @@ export class BaseTable extends TableContainer {
      * @param {number} [operationIndex]
      * @memberof BaseTable
      */
-    private processThead(processTheadData: ProcessTheadInterface) {
+    private processThead(processTheadData: ProcessTheadInterface): void {
         const param = processTheadData.param;
         switch (processTheadData.operationType) {
             case 'add':
@@ -1495,7 +1419,7 @@ export class BaseTable extends TableContainer {
                 this.theadMove(param as ParamTheadMove, false);
                 break;
             case 'add-replace':
-                this.theadAddPlace(param as ParamTheadAddReplace, false);
+                this.theadAddReplace(param as ParamTheadAddReplace, false);
                 break;
             case 'move-replace':
                 this.theadMoveReplace(param as ParamTheadMoveReplace, false);
@@ -1506,12 +1430,12 @@ export class BaseTable extends TableContainer {
             default:
         }
     }
-    private afterContainerClick(ev: any, th: CellContainer) {
+    private afterContainerClick(ev: any, th: CellContainer): void {
         // debugger
         const dom = ev.currentTarget;
 
         const container = this.$selectBoxEntity.createSelectContainer(dom, th);
-        if (!this.keyDownSet.has('Control')) {
+        if (!this.$keyDownSet.has('Control')) {
             this.$selectBoxEntity.clear();
         }
         this.$selectBoxEntity.add(container);
@@ -1523,7 +1447,7 @@ export class BaseTable extends TableContainer {
             const valueArr = oldValue.split('');
             let addValue = '';
             if (this.$positionManager.$editContainer.position.table !== this.position.table) {
-                addValue = 'table' + th.position.table + '!';
+                addValue = th.position.table + '!';
             }
             addValue += th.position.colStr + th.position.rowStr;
             valueArr.splice(editContainer.cell.selectionStart, 0, addValue);
@@ -1533,12 +1457,10 @@ export class BaseTable extends TableContainer {
             elInput.value = valueArr.join('');
             elInput.selectionStart = editContainer.cell.selectionStart + addValue.length;
             elInput.selectionEnd = editContainer.cell.selectionStart + addValue.length;
-            console.log(elInput.value);
-
         }
         focus();
     }
-    private afterContainerRClick(ev: any, th: CellContainer) {
+    private afterContainerRClick(ev: any, th: CellContainer): void {
         // debugger
         const dom = ev.currentTarget;
         const container = this.$selectBoxEntity.createSelectContainer(dom, th);
@@ -1552,10 +1474,60 @@ export class BaseTable extends TableContainer {
         focus();
     }
 
+    /**
+     * 初始化订阅事件 订阅表头变化
+     *
+     * @param {*} self
+     * @memberof BaseTable
+     */
+    private initSubject?(self: BaseTable): void {
+        self = self || this;
+        if (self.theadTopEntity) {
+            self.theadTopEntity.$subject.subscribe(self.onReceiveMsg, self);
+        }
+        if (self.theadLeftEntity) {
+            self.theadLeftEntity.$subject.subscribe(self.onReceiveMsg, self);
+        }
+        if (self.tbodyEntity) {
+            self.tbodyEntity.$subject.subscribe(self.onReceiveMsg, self);
+        }
+        self.theadTopIndexEntity.$subject.subscribe(self.onReceiveMsg, self);
+        self.theadLeftIndexEntity.$subject.subscribe(self.onReceiveMsg, self);
+    }
 
 
-
-
-
-
+    private initAfterSetData(): void {
+        this.position.table = this.id;
+        const topLeftPositon: PositionInterface = {
+            table: this.position.table,
+            colStr: 'A',
+            rowStr: 1,
+        };
+        this.tableHeadTopLeft.position = topLeftPositon;
+        const style = {
+            // 主表样式
+            mainTable: {
+                position: 'relative',
+                float: 'left',
+                overflowX: this.isOverflowX ? 'auto' : 'visible',
+                overflowY: this.isOverflowY ? 'auto' : 'visible',
+                maxWidth: !this.isOverflowX ? 'auto' : this.maxWidth,
+                maxHeight: !this.isOverflowY ? 'auto' : this.maxHeight,
+            },
+            leftTable: {
+                position: 'absolute',
+                // zIndex: 100,
+                overflowX: this.isOverflowX ? 'hidden' : 'visible',
+                overflowY: this.isOverflowY ? 'hidden' : 'visible',
+                maxHeight: !this.isOverflowY ? 'auto' : 'calc(' + this.maxHeight + ' - ' + this.scrollBarHeight + ')',
+            },
+            // 上侧表头
+            topTable: {
+                overflowX: this.isOverflowX ? 'hidden' : 'visible',
+                overflowY: this.isOverflowY ? 'hidden' : 'visible',
+                maxWidth: !this.isOverflowX ? 'auto' : 'calc(' + this.maxWidth + ' - ' + this.scrollBarWidth + ')',
+            },
+        };
+        _.objectSet(this.style, style, 'union');
+    }
 }

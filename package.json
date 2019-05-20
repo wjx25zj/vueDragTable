@@ -1,13 +1,13 @@
 {
   "name": "vue3-drag-table",
-  "version": "0.2.0",
+  "version": "0.2.14",
   "private": false,
   "main": "dist/drag-table.js",
   "scripts": {
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "lib": "vue-cli-service build --target lib --name drag-table --dest lib packages/drag-table2.0/index.js"
+    "lib": "vue-cli-service build --target lib --name drag-table --no-clean --dest lib packages/drag-table2.0/index.js"
   },
   "dependencies": {
     "vue": "^2.5.17",

@@ -1,11 +1,9 @@
-export function baseClone(Obj: any, exclude?: any[], keep?: any[], withFunction?: boolean) {
-    exclude = exclude || [];
-    keep = exclude || [];
+export function baseClone(Obj: any, excludeReg?: RegExp, keepReg?: RegExp, withFunction?: boolean) {
     let buf: any;
     if (Obj instanceof Array) {
         buf = [];
         Obj.forEach((val, i) => {
-            buf[i] = baseClone(val, exclude, keep);
+            buf[i] = baseClone(val, excludeReg, keepReg);
         });
         return buf;
     } else if (typeof Obj === 'function') {
@@ -14,31 +12,21 @@ export function baseClone(Obj: any, exclude?: any[], keep?: any[], withFunction?
         buf = {};
         for (const key in Obj) {
             if ((Obj.hasOwnProperty(key) || (typeof (Obj[key]) === 'function') && withFunction)) {
-                let needContinue = false;
-                let needKeep = false;
-                exclude.forEach((keyWord) => {
-                    if (key.indexOf(keyWord) !== -1) {
-                        needContinue = true;
-                    }
-                });
-                keep.forEach((keyWord) => {
-                    if (key.indexOf(keyWord) !== -1) {
-                        needKeep = true;
-                    }
-                });
+                const needContinue = excludeReg ? (excludeReg.test(key) ? true : false) : false;
+                const needKeep = keepReg ? (keepReg.test(key) ? true : false) : false;
                 if (needContinue) {
                     continue;
                 } else {
                     if (needKeep) {
                         buf[key] = (Obj[key]);
                     } else {
-                        buf[key] = baseClone(Obj[key], exclude, keep, withFunction);
+                        buf[key] = baseClone(Obj[key], excludeReg, keepReg, withFunction);
                     }
                 }
             }
         }
         return buf;
-    } else  {
+    } else {
         // console.log('啥都不是:' + Obj);
         return Obj;
     }

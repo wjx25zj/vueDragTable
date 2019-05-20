@@ -1,8 +1,8 @@
 import TableCom from './views/TableCom.vue';
-import { BaseTable } from './viewModule/table/BaseTable';
+import { DragTable } from './DragTable';
 export {
     TableCom,
-    BaseTable,
+    DragTable,
 }
 
 

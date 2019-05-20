@@ -4,7 +4,6 @@ export class BaseStyle {
     }
     public static removeBackgroundColor(dom: any) {
         dom.style.removeProperty('background-color');
-
     }
     public static addBorder(dom: any, borderBearing: string, width?: number, borderColor?: string) {
         let style = 'solid ';

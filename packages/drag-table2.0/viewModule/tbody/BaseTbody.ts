@@ -2,43 +2,26 @@ import { TbodyContainer } from '../container/TbodyContainer';
 import { TheadContainer } from '../container/TheadContainer';
 import * as _ from '../../utils';
 import { CellContainerInterface } from '../../interface/viewModule/container/CellContainer';
-import { IndexContainer } from '../container/IndexContainer';
-import { SubjectMsgInterface } from '../../interface/SubjectMsgInterface';
-import { Subject } from '../../communication/Subject';
 import { BaseTbodyInterface } from '../../interface/viewModule/tbody/BaseTbody';
 import { TbodyContainerInterface } from '../../interface/viewModule/container/TbodyContainer';
+import { IndexContainerInterface } from '../../interface/viewModule/container/IndexContainer';
+import { IndexContainer } from '../container/IndexContainer';
 export class BaseTbody extends TbodyContainer {
-    public topIndexList: IndexContainer[] = new Array();
-    public leftIndexList: IndexContainer[] = new Array();
-    public bodyData: any = {
-    };
-    //  表头变化
-    public tbodySubject = new Subject();
-
-
-    // constructor(type?: any, root?: any) {
-    //     super(type, 0, 0, root);
-    //     this.$rootParent = this;
-    // }
+    public topIndexList: IndexContainerInterface[];
+    public leftIndexList: IndexContainerInterface[];
+    public bodyData: any;
+    public separator: string = '_';
     constructor(param: BaseTbodyInterface) {
         super(param);
         this.$rootParent = this;
         this.cell = null;
-        if (param.id) {
-            super.setConfig(this.$defaultConfig[param.id]);
-            this.setConfig(param.config);
-        }
     }
 
-
-
-    /**
-     * subjectSend
-     */
-    public subjectSend(msg: SubjectMsgInterface) {
-        this.tbodySubject.sendMsg(msg);
+    public initBeforeSetData(paramClone?: any): void {
+        super.initBeforeSetData(paramClone);
+        _.objectSet(this.config, this.$dragTableConfig.BaseTbodyConfig, 'union');
+        _.objectSet(paramClone, this.$dragTableConfig.baseTbody, 'union');
     }
-
     /**
      * 添加一行数据
      *
@@ -46,35 +29,25 @@ export class BaseTbody extends TbodyContainer {
      * @returns
      * @memberof BaseTbody
      */
-    public setRowData(leftId?: any, rowData?: object | TbodyContainer[]) {
+    public setRowData(leftId?: any, rowData?: object | TbodyContainer[]): string {
         try {
             // console.log(this.topIndexList);
             leftId = leftId ? leftId : 'tbody_' + _.guid();
             const item = rowData || {};
             if (Array.isArray(item)) {
                 item.forEach((value: any, j: number) => {
-                    const container = this.createContain();
-                    if (['string', 'number'].indexOf(typeof value) !== -1) {
-                        container.cell.value = value;
-
-                    } else if (typeof value === 'object') {
-                        container.setContainerData(value);
+                    if (!this.topIndexList[j]) {
+                        return;
+                    } else {
+                        const topId = this.topIndexList[j].renderId;
+                        this.setData(leftId + this.separator + topId, value);
                     }
-                    const topId = this.topIndexList[j].id;
-                    this.setData(leftId, topId, container);
                 });
             } else if (typeof item === 'object') {
                 for (const topId in item) {
                     if (item.hasOwnProperty(topId)) {
                         const value = item[topId];
-                        const container = this.createContain();
-                        if (['string', 'number'].indexOf(typeof value) !== -1) {
-                            container.cell.value = value;
-                        } else if (typeof value === 'object') {
-                            container.setContainerData(value);
-
-                        }
-                        this.setData(leftId, topId, container);
+                        this.setData(leftId + this.separator + topId, value);
                     }
                 }
             }
@@ -89,35 +62,24 @@ export class BaseTbody extends TbodyContainer {
     /**
      * addCol
      */
-    public setColData(topId?: any, colData?: any) {
+    public setColData(topId?: any, colData?: object | TbodyContainer[]): string {
         try {
             topId = topId ? topId : 'tbody_' + _.guid();
             const item = colData || {};
             if (Array.isArray(item)) {
                 item.forEach((value: any, j: number) => {
-                    let container = this.createContain();
-                    if (['string', 'number'].indexOf(typeof value) !== -1) {
-                        container.cell.value = value;
-                    } else if (typeof value === 'object') {
-                        container = value;
-                    }
                     if (!this.leftIndexList[j]) {
                         return;
                     }
-                    const leftId = this.leftIndexList[j].id;
-                    this.setData(leftId, topId, container);
+                    const leftId = this.leftIndexList[j].renderId;
+                    this.setData(leftId + this.separator + topId, value);
                 });
             } else if (typeof item === 'object') {
+                // debugger
                 for (const leftId in item) {
                     if (item.hasOwnProperty(leftId)) {
                         const value = item[leftId];
-                        let container = this.createContain();
-                        if (['string', 'number'].indexOf(typeof value) !== -1) {
-                            container.cell.value = value;
-                        } else if (typeof value === 'object') {
-                            container = value;
-                        }
-                        this.setData(leftId, topId, container);
+                        this.setData(leftId + this.separator + topId, value);
                     }
                 }
             }
@@ -132,33 +94,88 @@ export class BaseTbody extends TbodyContainer {
 
 
     /**
+     * setTBodyData
+     */
+    public setTbodyData(data: object | Array<TbodyContainerInterface[] | object>): void {
+        this.$rootTable.render();
+        try {
+            if (Array.isArray(data)) {
+                data.forEach((rowData: object | any[], i: number) => {
+                    if (!this.leftIndexList[i]) {
+                        this.$rootTable.addOneRow({
+                            data: rowData,
+                            render: false
+                        });
+                    } else {
+                        const leftId = this.leftIndexList[i].renderId;
+                        this.setRowData(leftId, rowData);
+                    }
+                });
+            } else if (typeof data === 'object') {
+                for (const key in data) {
+                    if (data.hasOwnProperty(key)) {
+                        const value = data[key];
+                        this.setData(key, value);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(error);
+            console.error('输入数据格式有误');
+        }
+        this.subjectSend(
+            {
+                ev_type: 'beforeRender',
+                render: true,
+                event: null,
+                data: {
+                    objectName: 'setTbodyData',
+                    object: null
+                }
+            }
+        );
+    }
+
+    /**
      * setContainer
      */
-    public setData(leftId: any, topId: any, containerData: TbodyContainerInterface): TbodyContainer {
+    public setData(keyString: string, containerData: TbodyContainerInterface | string | number): TbodyContainer {
         let container: TbodyContainer;
         try {
-            let tmpTr = this.bodyData[leftId];
-            if (!tmpTr) {
-                this.bodyData[leftId] = tmpTr = {};
-            }
-            if (tmpTr[topId]) {
-                tmpTr[topId].setContainerData(containerData);
+            if (this.bodyData.hasOwnProperty(keyString)) {
+                container = this.bodyData[keyString];
             } else {
-                tmpTr[topId] = this.createContain(containerData);
+                container = this.createContain();
             }
-            container = tmpTr[topId];
+            if (['string', 'number'].indexOf(typeof containerData) !== -1) {
+                container.cell.value = containerData;
+            } else if (typeof containerData === 'object') {
+                container.setContainerData(containerData);
+            }
         } catch (error) {
             console.error(error);
         }
         return container;
     }
+
     /**
      * 设置tbody属性 部分特殊处理
      *
      * @param {CellContainerInterface} containerData
      * @memberof TbodyContainer
      */
-    public setContainerData(containerData: CellContainerInterface) {
+    public setContainerData(containerData: CellContainerInterface, containerData2?: CellContainerInterface, weight1?: object, weight2?: object, callBack?: any) {
+
+        const conditionHandle = (key: string, value: any) => {
+            // debugger
+            if (key === 'bodyData') {
+                this.setTbodyData(value);
+                return;
+            }
+            this.setProperty(key, value);
+
+        };
+        super.setContainerData(containerData, containerData2, weight1, weight2, conditionHandle);
         // debugger
         for (const key in containerData) {
             if (containerData.hasOwnProperty(key)) {
@@ -188,14 +205,6 @@ export class BaseTbody extends TbodyContainer {
         this.side1 = this.topIndexList.length;
         this.side2 = this.leftIndexList.length;
     }
-
-
-    public initData(col: any, row: any) {
-        // this.bodyData = [];
-        for (let i = 0; i < row; i++) {
-            this.setRowData();
-        }
-    }
     /**
      * 创建容器
      *
@@ -205,16 +214,14 @@ export class BaseTbody extends TbodyContainer {
      * @memberof BaseThead
      */
     public createContain(data?: CellContainerInterface) {
-        const $positionManagerId = this.$positionManagerId;
-        const $defConfigId = this.$defConfigId;
+        const $groupId = this.$groupId;
         const container = new TbodyContainer({
             type: 'tbody',
             side1: 1,
             side2: 1,
+            $groupId,
             $rootTable: this.$rootTable,
             $rootParent: this,
-            $positionManagerId,
-            $defConfigId,
             config: this.$rootParent.config
         });
         if (data) {
@@ -226,23 +233,19 @@ export class BaseTbody extends TbodyContainer {
     /**
      * render
      */
-    public render() {
+    public render(): void {
         const leftIndexList = this.leftIndexList;
         const topIndexList = this.topIndexList;
         this.resize();
-        leftIndexList.forEach((leftIndexTh: IndexContainer) => {
-            let tmpTr: any = {};
-            if (this.bodyData.hasOwnProperty(leftIndexTh.id)) {
-                tmpTr = this.bodyData[leftIndexTh.id];
-            }
-            topIndexList.forEach((topIndexTh: IndexContainer) => {
+        leftIndexList.forEach((leftIndexTh: IndexContainerInterface) => {
+            topIndexList.forEach((topIndexTh: IndexContainerInterface) => {
+                const keyString = leftIndexTh.renderId + this.separator + topIndexTh.renderId;
                 let container: TbodyContainer = this.createContain();
-                if (!tmpTr.hasOwnProperty(topIndexTh.id)) {
-                    tmpTr[topIndexTh.id] = container;
+                if (this.bodyData.hasOwnProperty(keyString)) {
+                    container = this.bodyData[keyString];
                 } else {
-                    container = tmpTr[topIndexTh.id];
+                    this.bodyData[keyString] = container;
                 }
-
                 container.position = {
                     table: this.$rootTable.position.table,
                     colNum: topIndexTh.theadPosition[0],
@@ -250,23 +253,22 @@ export class BaseTbody extends TbodyContainer {
                     colStr: _.getA_Z(topIndexTh.theadPosition[0]),
                     rowStr: leftIndexTh.theadPosition[0] + 1,
                 };
-                container.id = [leftIndexTh.id, topIndexTh.id];
+                container.id = keyString;
                 this.$positionManager.setPositionMap(container.position, container, 'source');
-
                 const leftThead = leftIndexTh.$theadContainer;
                 const topThead = topIndexTh.$theadContainer;
-                let leftThTbdoyConfig = leftIndexTh.tbodyConfig.container;
-                let topThTbdoyConfig = topIndexTh.tbodyConfig.container;
+                let leftThTbdoyConfig = leftIndexTh.tbodyConfig.container || {};
+                let topThTbdoyConfig = topIndexTh.tbodyConfig.container || {};
                 // debugger
                 let sumContainer: TheadContainer;
-                if (/sum/.test(leftIndexTh.id)) {
-                    topThTbdoyConfig = null;
-                    sumContainer = leftThead;
-                } else if (/sum/.test(topIndexTh.id)) {
-                    leftThTbdoyConfig = null;
-                    sumContainer = topThead;
+                if (/sum/.test(leftIndexTh.renderId)) {
+                    topThTbdoyConfig = {};
+                    sumContainer = leftThead as TheadContainer;
+                } else if (/sum/.test(topIndexTh.renderId)) {
+                    leftThTbdoyConfig = {};
+                    sumContainer = topThead as TheadContainer;
                 }
-                if ((/sum/.test(topIndexTh.id) || /sum/.test(leftIndexTh.id)) && ((leftIndexTh.canSum || topThead === undefined) && (topIndexTh.canSum || leftThead === undefined))) {
+                if ((/sum/.test(topIndexTh.renderId) || /sum/.test(leftIndexTh.renderId)) && ((leftIndexTh.canSum || topThead === undefined) && (topIndexTh.canSum || leftThead === undefined))) {
                     // const sumContainer = leftIndexTh.id.indexOf('sum') !== -1 ? leftIndexTh.$theadContainer : topIndexTh.$theadContainer;
                     const parentContainer: TheadContainer = sumContainer.$rootParent.getContainerByTheadPosition(_.dropRight(sumContainer.theadPosition));
                     const containerList = new Array();
@@ -288,59 +290,40 @@ export class BaseTbody extends TbodyContainer {
                         // container.cell.setProperty('value', ('=' + containerList.join('+')));
                         container.cell.value = ('=' + containerList.join('+'));
                     }
+
                 }
+
+                // if (container.id === 'none-zj') {
+                //     debugger
+                // }
+                const renderByThead = this.getDataByWeight('renderByThead', leftThTbdoyConfig, topThTbdoyConfig, leftIndexTh.tbodyConfig.weight, topIndexTh.tbodyConfig.weight);
+                container.renderByThead = renderByThead === undefined ? container.renderByThead : renderByThead;
                 if (container.renderByThead == true) {
-                    container.setContainerData(leftThTbdoyConfig as any, topThTbdoyConfig as any, leftIndexTh.tbodyConfig.weight, topIndexTh.tbodyConfig.weight);
+                    container.setContainerData(leftThTbdoyConfig, topThTbdoyConfig, leftIndexTh.tbodyConfig.weight, topIndexTh.tbodyConfig.weight);
                 }
-                // console.log(container.position.colStr + '' + container.position.rowStr + ':' + container.renderByThead);
                 container.style.width = topIndexTh.style.width;
                 container.style.height = leftIndexTh.style.height;
+                container.widthSelfNum = topIndexTh.widthNum;
+                container.heightSelfNum = topIndexTh.heightNum;
                 container.cell.render();
-                container.widthNum = Number(container.style.width.replace('px', ''));
-                container.heightNum = Number(container.style.height.replace('px', ''));
             });
-            this.bodyData[leftIndexTh.id] = tmpTr;
+            // this.bodyData[leftIndexTh.renderId] = tmpTr;
         });
     }
 
-
-    /**
-     * getContainerById
-     */
-    public getContainerById(position: any[]) {
-        let res = null;
-        try {
-            const leftId = position[0];
-            const topId = position[1];
-            if (this.bodyData.hasOwnProperty(leftId)) {
-                const tmpTr = this.bodyData[leftId];
-                if (tmpTr.hasOwnProperty(topId)) {
-                    res = tmpTr[topId];
-
-                }
-            }
-        } catch (error) {
-            console.error('发生错误');
-        }
-        return res;
-    }
-
-
-    public convert() {
+    public convert(): TbodyContainerInterface[][] {
         const bodyData = new Array();
-        this.leftIndexList.forEach((leftIndexTh: TheadContainer) => {
-            if (this.bodyData.hasOwnProperty(leftIndexTh.id)) {
-                const tmpTr = this.bodyData[leftIndexTh.id];
-                const trData = new Array();
-                this.topIndexList.forEach((topIndexTh: TheadContainer) => {
-                    if (tmpTr.hasOwnProperty(topIndexTh.id)) {
-                        const td = tmpTr[topIndexTh.id];
-                        trData.push(td);
-                        this.$positionManager.setPositionMap(td.position, td, 'clone');
-                    }
-                });
-                bodyData.push(trData);
-            }
+        this.leftIndexList.forEach((leftIndexTh: IndexContainerInterface) => {
+            const trData = new Array();
+            this.topIndexList.forEach((topIndexTh: IndexContainerInterface) => {
+                const keyString = leftIndexTh.renderId + this.separator + topIndexTh.renderId;
+                if (this.bodyData.hasOwnProperty(keyString)) {
+                    const td = this.bodyData[keyString];
+                    trData.push(td);
+                    this.$positionManager.setPositionMap(td.position, td, 'clone');
+                }
+            });
+            bodyData.push(trData);
         });
         return bodyData;
     }
@@ -350,56 +333,76 @@ export class BaseTbody extends TbodyContainer {
      * @returns
      * @memberof BaseTbody
      */
-    public output() {
-        const res = new Array();
-        this.leftIndexList.forEach((leftIndexTh: TheadContainer) => {
-            if (this.bodyData.hasOwnProperty(leftIndexTh.id)) {
-                const tmpTr = this.bodyData[leftIndexTh.id];
-                const trData: any = {};
-                this.topIndexList.forEach((topIndexTh: TheadContainer) => {
-                    if (tmpTr.hasOwnProperty(topIndexTh.id)) {
-                        trData[topIndexTh.id] = (tmpTr[topIndexTh.id].cell.content);
+    public output(valueType: 'content' | 'container'): any {
+        const objectData = {};
+        const arrayObjectData = [];
+        const arrayArrayData = [];
+        this.leftIndexList.forEach((leftIndexTh: IndexContainerInterface) => {
+            const trObject: any = {};
+            const trArray: any[] = [];
+            this.topIndexList.forEach((topIndexTh: IndexContainerInterface) => {
+                const keyString = leftIndexTh.renderId + this.separator + topIndexTh.renderId;
+                if (this.bodyData.hasOwnProperty(keyString)) {
+                    const container = this.bodyData[keyString];
+                    if (valueType === 'content') {
+                        objectData[keyString] = container.cell.content;
+                        trObject[topIndexTh.renderId] = container.cell.content;
+                        trArray.push(container.cell.content);
+                    } else if (valueType === 'container') {
+                        objectData[keyString] = container;
+                        trObject[topIndexTh.renderId] = container;
+                        trArray.push(container);
                     }
-                });
-                res.push(trData);
-            }
+                }
+            });
+            arrayObjectData.push(trObject);
+            arrayArrayData.push(trArray);
         });
-        return res;
+        return {
+            objectData,
+            arrayObjectData,
+            arrayArrayData
+        };
     }
-
     /**
      * 用于序列化中的导出
      *
      * @returns
      * @memberof BaseTbody
      */
-    public output2() {
+    public outputByObject(): object {
         const res: any = {};
-        this.leftIndexList.forEach((leftIndexTh: TheadContainer) => {
-            if (this.bodyData.hasOwnProperty(leftIndexTh.id)) {
-                const tmpTr = this.bodyData[leftIndexTh.id];
+        this.leftIndexList.forEach((leftIndexTh: IndexContainerInterface) => {
+            if (this.bodyData.hasOwnProperty(leftIndexTh.renderId)) {
+                const tmpTr = this.bodyData[leftIndexTh.renderId];
                 const trData: any = {};
-                this.topIndexList.forEach((topIndexTh: TheadContainer) => {
-                    if (tmpTr.hasOwnProperty(topIndexTh.id)) {
-                        trData[topIndexTh.id] = (tmpTr[topIndexTh.id] as TbodyContainer).clone(['$']);
+                this.topIndexList.forEach((topIndexTh: IndexContainerInterface) => {
+                    if (tmpTr.hasOwnProperty(topIndexTh.renderId)) {
+                        trData[topIndexTh.renderId] = (tmpTr[topIndexTh.renderId] as TbodyContainer).clone();
                     }
                 });
-                res[leftIndexTh.id] = (trData);
+                res[leftIndexTh.renderId] = (trData);
             }
         });
         return res;
     }
-
-
     /**
-     *   重写 clone
+     * cleanTbody
      */
-    public clone(exclude?: string[], keep?: string[], withFunction?: boolean) {
-        let object: any = {};
-        exclude = exclude || [];
-        exclude.push('bodyData');
-        object = super.clone(exclude, keep, withFunction);
-        object.bodyData = this.output2();
-        return object;
+    public cleanTimeOutTbody() {
+        const newData = {};
+        this.leftIndexList.forEach((leftIndexTh: IndexContainerInterface) => {
+            this.topIndexList.forEach((topIndexTh: IndexContainerInterface) => {
+                const keyString = leftIndexTh.renderId + this.separator + topIndexTh.renderId;
+                if (this.bodyData.hasOwnProperty(keyString)) {
+                    newData[keyString] = this.bodyData[keyString];
+                }
+            });
+        });
+        this.bodyData = newData;
+    }
+    public clone(excludeReg?: RegExp, keepReg?: RegExp, withFunction?: boolean) {
+        this.cleanTimeOutTbody();
+        return super.clone(excludeReg, keepReg, withFunction);
     }
 }

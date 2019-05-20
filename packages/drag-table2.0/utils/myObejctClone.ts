@@ -1,8 +1,7 @@
-import { baseClone } from './base/clone';
-export function myObejctClone(Obj: any, exclude?: string[], keep?: string[], withFunction?: boolean) {
+import { keepClone } from './keepClone';
+export function myObejctClone(Obj: any, excludeReg?: RegExp, keepReg?: RegExp, withFunction?: boolean) {
     const object: any = Object.create({});
     for (const key in Obj) {
-
         if (Obj.hasOwnProperty(key) || (withFunction && typeof Obj[key] === 'function')) {
             if (key === '_value') {
                 Object.defineProperty(object, 'value', {
@@ -10,43 +9,33 @@ export function myObejctClone(Obj: any, exclude?: string[], keep?: string[], wit
                         return this._value;
                     },
                     set(value) {
-                        this.renderState.hasrendered = false;
+                        this.$renderState.hasrendered = false;
                         this._value = value;
                     }
                 });
             }
             const tmpObject: any = Obj[key];
             let val: any = null;
-            let needContinue = false;
-            let needKeep = false;
-            (exclude || []).forEach((keyWord) => {
-                if (key.indexOf(keyWord) !== -1) {
-                    needContinue = true;
-                }
-            });
-            (keep || []).forEach((keyWord) => {
-                if (key.indexOf(keyWord) !== -1) {
-                    needKeep = true;
-                }
-            });
+            const needContinue = excludeReg ? (excludeReg.test(key) ? true : false) : false;
+            const needKeep = keepReg ? (keepReg.test(key) ? true : false) : false;
             if (needContinue) {
                 continue;
             } else if (needKeep) {
                 val = Obj[key];
             } else if (Array.isArray(tmpObject)) {
-                val = [];
+                val = [];      
                 tmpObject.forEach((item: any) => {
-                    if (item.EPI_READY && typeof item.clone === 'function') {
-                        val.push(item.clone(exclude, keep, withFunction));
+                    if ( typeof item.clone === 'function') {
+                        val.push(item.clone(excludeReg, keepReg, withFunction));
                     } else {
-                        val.push(baseClone(item, exclude, keep, withFunction));
+                        val.push(keepClone(item, excludeReg, keepReg, withFunction));
                     }
                 });
             } else if (typeof Obj[key] === 'object') {
-                if (tmpObject && tmpObject.EPI_READY && typeof tmpObject.clone === 'function') {
-                    val = tmpObject.clone(exclude, keep, withFunction);
+                if (tmpObject && typeof tmpObject.clone === 'function') {
+                    val = tmpObject.clone(excludeReg, keepReg, withFunction);
                 } else {
-                    val = (baseClone(tmpObject, exclude, keep, withFunction));
+                    val = (keepClone(tmpObject, excludeReg, keepReg, withFunction));
                 }
             } else {
                 val = Obj[key];

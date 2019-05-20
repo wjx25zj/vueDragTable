@@ -2,7 +2,6 @@
   <div id="app">
     <div id="nav">
       <router-link to="/">Home</router-link> |
-      <router-link to="/haier">haier1.0</router-link> |
       <router-link to="/DragTable">DragTable2.0</router-link>|
       <router-link to="/lib_tableTest">lib_tableTest</router-link>
     </div>

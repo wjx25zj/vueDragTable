@@ -12,7 +12,7 @@ export class Formula {
         if (typeof str !== 'string') {// 转化成字符串
             str = str + '';
         }
-        str = (str + '').replace(/[\s]/g,'');
+        str = (str + '').replace(/[\s]/g, '');
         const reg = '[\(][^\(]*?[\)]';
         let multObj = str.match(reg); // 匹配括号
         // 不断计算最底层括号的数据
@@ -86,16 +86,19 @@ export class Formula {
 
     // 两个数的加减乘除
     public static simpleTwoEval(mark: string, value1: number, value2: number) {
+        let res = 0;
         if (mark === '+') {
-            return value1 + value2;
+            res = value1 + value2;
         } else if (mark === '-') {
-            return value1 - value2;
+            res = value1 - value2;
         } else if (mark === '*') {
-            return value1 * value2;
+
+            res = value1 * value2;
         } else if (mark === '/') {
-            return value1 / value2;
+            res = value1 / value2;
         }
-        return 0;
+        res = parseFloat(res.toFixed(10));
+        return res;
     }
 
     // 反转数组
@@ -114,7 +117,7 @@ export class Formula {
      */
     public static cellStr2Position(cellStr: string): PositionInterface {
         const res: PositionInterface = {
-            table: (/[0-9]+(?=!)/.exec(cellStr) || [null])[0],
+            table: (/^[\u4e00-\u9fa5_a-zA-Z0-9_]+(?=\!)/.exec(cellStr) || [null])[0],
             colStr: (/[^!]?([A-Z])+/.exec(cellStr) || [null])[0],
             rowStr: (/[0-9]+$/.exec(cellStr) || [null])[0],
         };
@@ -144,4 +147,14 @@ export class Formula {
         }
         return str;
     }
+
+    public static percentHandle(str: string) {
+        const percentReg = /(\d+(\.\d+)*)%/g;
+        const res = str.replace(percentReg, (match: any, group1: string) => {
+            return Number(group1) * 0.01 + '';
+        });
+        return res;
+    }
+
+
 }

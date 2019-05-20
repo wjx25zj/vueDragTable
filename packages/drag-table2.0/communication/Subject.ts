@@ -23,13 +23,16 @@ export class Subject {
         }
     }
 
-    public sendMsg(msg: any) {
-        this.notify(msg);
+
+    public sendMsg(msg: any): any {
+        return this.notify(msg);
     }
 
     private notify(msg: any) {
+        const resultList = [];
         this.callbackList.forEach((obj) => {
-            obj.fun.call(obj.arg, msg);
+            resultList.push(obj.fun.call(obj.arg, msg) || true);
         });
+        return resultList;
     }
 }
