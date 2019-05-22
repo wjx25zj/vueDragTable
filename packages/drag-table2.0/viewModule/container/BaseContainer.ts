@@ -379,9 +379,9 @@ export abstract class BaseContainer {
             if (wk1 && wk2) {
                 if (!isNaN(wk1) && !isNaN(wk2)) {
                     resData = wk1 > wk2 ? dk1 : dk2;
-                } else if (!isNaN(wk1) && isNaN(wk1)) {
+                } else if (!isNaN(wk1) && isNaN(wk2)) {
                     resData = dk1;
-                } else if (isNaN(wk1) && !isNaN(wk1)) {
+                } else if (isNaN(wk1) && !isNaN(wk2)) {
                     resData = dk2;
                 } else if (typeof wk1 === 'object' && typeof wk2 === 'object') {
                     resData = {};

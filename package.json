@@ -1,6 +1,6 @@
 {
   "name": "vue3-drag-table",
-  "version": "0.2.14",
+  "version": "0.2.16",
   "private": false,
   "main": "dist/drag-table.js",
   "scripts": {

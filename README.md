@@ -1,7 +1,9 @@
-##  0.2.15 :2019.3.25
+##  0.2.16 :2019.5.20
 - bugFix
   - 修复当通过addReplace方法添加带有treeContainer的容器时，不能添加孩子bug
-  - 修改dragstartData中的withchilren不能传入dropHand中
+  - 修改dragstartData中的withchilren不能传入dropHand中;
+  - 修改getDataByWeight中 权重bug
+  
   
 ##  0.2.14 :2019.3.25
 - new
