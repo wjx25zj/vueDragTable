@@ -16,6 +16,7 @@ export class TheadContainer extends CellContainer {
     // overwrite
     public type: 'top' | 'left' | 'top-index' | 'left-index';
     public $rootParent: BaseThead;
+    public $treeParent: TreeContainer;
     public children: TheadContainer[]; // 子容器
 
     public canSum: boolean;// 是否可以合计
@@ -47,8 +48,9 @@ export class TheadContainer extends CellContainer {
             $groupId: this.$groupId
         };
         this.treeContainer = ContainerFactory.create('treeContainer', attachParam);
-        this.config = _.clone(this.$dragTableConfig.TheadContainerConfig);
-        // _.objectSet(this.config, this.$dragTableConfig.TheadContainerConfig, 'union');
+
+        const config = _.clone(this.$dragTableConfig.TheadContainerConfig);
+        _.objectSet(this.config, config, 'union');
         _.objectSet(paramClone, this.$dragTableConfig.theadContainer, 'union');
         delete this.config.style.width;
         delete this.config.style.height;
@@ -121,7 +123,7 @@ export class TheadContainer extends CellContainer {
     /**
      * 自动递归计算容器长宽，以及span、theadPosition等属性值
      *
-     * @param {any[]} [$leafIndexList]
+     * @param {any[]} [$leafIndexListTmp]
      * @memberof TheadContainer
      */
     public resize(): any {
@@ -239,7 +241,7 @@ export class TheadContainer extends CellContainer {
                 otherRes = [];
             }
             if (this.$rootParent && !this.isRootParent && sumGridSide1 === 0) {
-                this.$rootParent.$leafIndexList.push(this);
+                this.$rootParent.$leafIndexListTmp.push(this);
             }
         }
         return otherRes;

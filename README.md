@@ -1,3 +1,18 @@
+##  0.2.19 :2019.8.15
+- bugFix 
+  - 修改vue修饰v-for 中：key的绑定，该bug导致控制台异常报错
+  - 修改BaseTbody的render函数，此前bug：边循环tbodycontainer 边进行tbodyConfig设置,导致如果前A单元格(含公式) 基于B单元格（含公式，且公式由表头控制）的值计算 出现问题，因为B单元格公式还未赋予，所以获得B的值为0。解决方案：将预处理的tbodycontainer加入队列，预处理完成后统一渲染。
+- change
+  - 对于setTbodyData方法的事件回调中加补充objectName:'setTbodyData'  
+
+##  0.2.18 :2019.5.31
+- new
+  - 对已展开的树形容器（treeContainer）进行删除，会连同#treeParent中children里的container一同删除。
+  
+##  0.2.17 :2019.5.23
+- new
+  - BaseTable中getTheadLeavesList1方法加入第二入参 needResize,该值为false时不调用BaseThead的resize方法，即获取上一次渲染后的状态。
+  
 ##  0.2.16 :2019.5.20
 - bugFix
   - 修复当通过addReplace方法添加带有treeContainer的容器时，不能添加孩子bug

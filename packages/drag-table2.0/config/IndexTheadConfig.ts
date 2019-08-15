@@ -1,8 +1,8 @@
 import * as _ from '../utils';
 import { IndexContainerConfig } from './IndexContainerConfig';
 export class IndexTheadConfig extends IndexContainerConfig {
-    public $leafIndexList = new Array();
-    public $leafIndexList2 = new Array();
+    public $leafIndexListTmp = new Array();
+    public $leafIndexListTmp2 = new Array();
     public side1 = 0;
     public side2 = 0;
     public span1 = 0;

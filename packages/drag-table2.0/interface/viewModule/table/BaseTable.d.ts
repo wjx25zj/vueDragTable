@@ -20,7 +20,7 @@ export interface BaseTableInterface extends TableContainerInterface {
   
 
     addParent?(newParentContainData?: TheadContainerInterface): void;
-    getTheadLeavesList1?(theadType: 'top' | 'left'): TheadContainerInterface[] | null;
+    getTheadLeavesList1?(theadType: 'top' | 'left',needResize?: boolean): TheadContainerInterface[] | null;
     setConfig?(config: TableConfigInterface): void;
     clone?(): object;
     setContainerData?(data: object): void;

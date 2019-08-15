@@ -25,6 +25,7 @@
           <button @click="merge()">merge</button>
           <button @click="addTableLeft()">addTableLeft</button>
           <button @click="deletTable()">删除table</button>
+          <button @click="deletCell()">删除Cell</button>
           <button @click="setContainerHideType('hideSelf')">hideSelf</button>
           <button @click="setContainerHideType('hideChildrenHeight')">hideChildrenHeight</button>
           <button @click="setContainerHideType('visible')">visible</button>
@@ -90,6 +91,16 @@
     },
     methods: {
       mdTest(container: any) {},
+      deletCell() {
+        // debugger;
+        if (this.tmpTable && this.tmpTHead) {
+          this.tmpTable.theadDelete({
+            type: this.tmpTHead.type,
+            targetContainerPosition: this.tmpTHead.theadPosition,
+            withChildren: true
+          },true);
+        }
+      },
       merge() {
         this.tmpTable.merge();
       },
@@ -136,8 +147,8 @@
           // debugLevel: 1,
           isOverflowY: true,
           isOverflowX: true,
-          maxWidth: "400px",
-          maxHeight: "200px",
+          // maxWidth: "400px",
+          // maxHeight: "200px",
           // isTopLeftShow: true,
           canDragResize: true
         }));

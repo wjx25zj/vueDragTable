@@ -20,8 +20,8 @@ export class SelfContainer extends BaseContainer {
     public initBeforeSetData(paramClone?: any) {
         super.initBeforeSetData(paramClone);
         this.$parent = paramClone.$parent;
-        this.config = _.clone(this.$dragTableConfig.SelfContainerConfig);
-        // _.objectSet(this.config, this.$dragTableConfig.SelfContainerConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.SelfContainerConfig);
+        _.objectSet(this.config, config, 'union');
     }
     public onClick(ev: any): void {
         ev.stopPropagation();

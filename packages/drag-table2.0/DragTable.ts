@@ -15,7 +15,7 @@ export class DragTable {
     public id: string = null;
     public $subject: Subject = new Subject();
     public $config: DragTableConfig = {};// 总体设置
-    public readonly version: string = '0.2.6';
+    public readonly version: string = '0.2.18';
     public tableList: BaseTable[] = [];
     public tableMap: Map<any, BaseTable> = new Map();
     public $positionManager: PositionManager; // 位置记录器

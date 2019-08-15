@@ -4,8 +4,8 @@ import { IndexContainer } from '../container/IndexContainer';
 import { IndexContainerInterface } from '../../interface/viewModule/container/IndexContainer';
 
 export class IndexThead extends IndexContainer {
-    public $leafIndexList: IndexContainer[];
-    public $leafIndexList2: IndexContainer[];
+    public $leafIndexListTmp: IndexContainer[];
+    public $leafIndexListTmp2: IndexContainer[];
     constructor(param: IndexContainerInterface) {
         super(param);
     }
@@ -16,7 +16,9 @@ export class IndexThead extends IndexContainer {
         super.initBeforeSetData(paramClone);
         this.cell = null;
         this.$rootParent = this;
-        _.objectSet(this.config, this.$dragTableConfig.IndexTheadConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.IndexTheadConfig);
+        _.objectSet(this.config, config, 'union');
+
         if (/top-index/.test(this.type)) {
             _.objectSet(paramClone, this.$dragTableConfig.topIndexThead, 'union');
         } else if (/left-index/.test(this.type)) {
@@ -30,8 +32,8 @@ export class IndexThead extends IndexContainer {
      * resize
      */
     public resize(): void {
-        this.$leafIndexList = [];
-        this.$leafIndexList2 = [];
+        this.$leafIndexListTmp = [];
+        this.$leafIndexListTmp2 = [];
         super.resize();
     }
 

@@ -76,7 +76,8 @@ export class BaseCell implements BaseCellInterface {
         this.$groupId = paramClone.$groupId;
         this.$parent = paramClone.$parent as CellContainer;
         this.$dragTableConfig = DragTableConfig.getInstance(this.$groupId);
-        _.objectSet(this.config, this.$dragTableConfig.BaseCellConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.BaseCellConfig);
+        _.objectSet(this.config, config, 'union');
         _.objectSet(paramClone, this.$dragTableConfig.baseCell, 'union');
     }
 
@@ -481,7 +482,7 @@ export class BaseCell implements BaseCellInterface {
                     formulaContent = Formula.curlyBracesHandle(formulaContent, parentContainer);
                 }
 
-                let ICObject: any = {}; // 新建一个对象存储对应信息
+                const ICObject: any = {}; // 新建一个对象存储对应信息
                 const regObj = formulaContent.match(posiitonReg);
                 (regObj || []).forEach((item: string) => {
                     // 获得position 如果没有table则默认为同表操作

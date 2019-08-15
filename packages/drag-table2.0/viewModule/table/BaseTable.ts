@@ -68,7 +68,10 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
 
     public initBeforeSetData(paramClone?: any): void {
         super.initBeforeSetData(paramClone);
-        _.objectSet(this.config, this.$dragTableConfig.BaseTableConfig, 'union');
+        
+        const config = _.clone(this.$dragTableConfig.BaseTableConfig);
+        _.objectSet(this.config, config, 'union');
+
         _.objectSet(paramClone, this.$dragTableConfig.table, 'union');
         const $groupId = this.$groupId;
         this.$selectBoxEntity = SelectBox.getInstance(this.$groupId, this);
@@ -505,8 +508,6 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
 
             let canDel = false;
             const lastSelectContainer: TheadContainer = this.$selectBoxEntity.currentCotanier as TheadContainer;
-
-
             if (param) {
                 targetIndexPosition = _.last(param.targetContainerPosition);
                 targetParentPosition = _.dropRight(param.targetContainerPosition);
@@ -530,6 +531,15 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
                 const deleteContainer: TheadContainer = targetThead.getContainerByTheadPosition(targetContainerPosition);
                 const targetParentContainer = targetThead.getContainerByTheadPosition(targetParentPosition) as TheadContainer;
                 targetParentContainer.deletChild(targetIndexPosition, 1, withChildren);
+                if (deleteContainer.addByTree) {
+                    let delIndex = -1;
+                    deleteContainer.$treeParent.children.forEach((child, i) => {
+                        if (child.id == deleteContainer.id) {
+                            delIndex = i;
+                        }
+                    });
+                    deleteContainer.$treeParent.deletChild(delIndex, 1, withChildren);
+                }
                 targetThead.resize();
 
                 this.onReceiveMsg({
@@ -906,12 +916,14 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
     /**
      * 获得叶子节点1
      */
-    public getTheadLeavesList1(theadType: 'top' | 'left'): TheadContainerInterface[] | null {
+    public getTheadLeavesList1(theadType: 'top' | 'left', needResize?: boolean): TheadContainerInterface[] | null {
         let res = null;
         try {
             const Entity = this.getEntity(theadType) as BaseThead;
-            Entity.resize();
-            res = Entity.$leafIndexList;
+            if (needResize != false) {
+                Entity.resize();
+            }
+            res = Entity.$leafIndexListTmp;
         } catch (error) {
             console.error('获取错误');
         }
@@ -1020,7 +1032,7 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
                 this.theadTopIndexEntity.deletChild(theadLeftWidth, topIndexWidth, true);
                 this.theadTopIndexEntity.resize();
                 topIndexWidth = this.theadTopIndexEntity.side1;
-                this.theadTopEntity.$leafIndexList.forEach((th: TheadContainer, i: number) => {
+                this.theadTopEntity.$leafIndexListTmp.forEach((th: TheadContainer, i: number) => {
                     const index = i + theadLeftWidth;
                     const container = this.theadTopIndexEntity.createContain();
                     const thContainer = this.theadTopEntity.getContainerByTheadPosition(th.theadPosition);
@@ -1036,7 +1048,7 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
                 // console.log(this.theadTopIndexEntity.children);
                 this.theadTopIndexEntity.children.forEach((th: IndexContainer, i: number) => {
                     if (i + 1 <= theadLeftWidth) {
-                        const theadContainer: TheadContainer = this.theadLeftEntity.$leafIndexList2[i];
+                        const theadContainer: TheadContainer = this.theadLeftEntity.$leafIndexListTmp2[i];
                         const container = this.theadTopIndexEntity.createContain();
                         container.update(theadContainer);
                         if (/tbody/.test(th.renderId)) {
@@ -1059,7 +1071,7 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
                 leftIndexHeight = this.theadLeftIndexEntity.side1;
                 // console.log(this.theadLeftEntity);
 
-                this.theadLeftEntity.$leafIndexList.forEach((th: TheadContainer, i: number) => {
+                this.theadLeftEntity.$leafIndexListTmp.forEach((th: TheadContainer, i: number) => {
                     const index = i + theadTopHeight;
                     const container = this.theadLeftIndexEntity.createContain();
                     // console.log(this.theadLeftEntity);
@@ -1075,7 +1087,7 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
             } else {
                 this.theadLeftIndexEntity.children.forEach((th: IndexContainer, i: number) => {
                     if (i + 1 <= theadTopHeight) {
-                        const theadContainer: TheadContainer = this.theadTopEntity.$leafIndexList2[i];
+                        const theadContainer: TheadContainer = this.theadTopEntity.$leafIndexListTmp2[i];
                         const container = this.theadLeftIndexEntity.createContain();
                         container.update(theadContainer);
                         if (/tbody/.test(th.renderId)) {
@@ -1096,7 +1108,7 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
             if (maxWidth) {
                 for (let colIndex = 0; colIndex < theadLeftWidth; colIndex++) {
                     const originalColTh: IndexContainer = this.theadTopIndexEntity.getContainerByTheadPosition([colIndex]);
-                    const thContainer = this.theadLeftEntity.$leafIndexList2[colIndex];
+                    const thContainer = this.theadLeftEntity.$leafIndexListTmp2[colIndex];
                     const container = this.theadTopIndexEntity.createContain();
                     container.update(thContainer);
                     if (colIndex + 1 > topIndexWidth || /tbody/.test(originalColTh.renderId)) {
@@ -1119,7 +1131,7 @@ export class BaseTable extends TableContainer implements BaseTableInterface {
             if (maxHeight) {
                 for (let rowIndex = 0; rowIndex < theadTopHeight; rowIndex++) {
                     const originalRowTh: IndexContainer = this.theadLeftIndexEntity.getContainerByTheadPosition([rowIndex]);
-                    const thContainer = this.theadTopEntity.$leafIndexList2[rowIndex];
+                    const thContainer = this.theadTopEntity.$leafIndexListTmp2[rowIndex];
                     const container = this.theadLeftIndexEntity.createContain();
                     container.update(thContainer);
                     if (rowIndex + 1 > leftIndexHeight || /tbody/.test(originalRowTh.renderId)) {

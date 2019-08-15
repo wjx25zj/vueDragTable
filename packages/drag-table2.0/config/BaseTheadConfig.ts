@@ -4,8 +4,8 @@ import { TheadContainerConfig } from './TheadContainerConfig';
 export class BaseTheadConfig extends TheadContainerConfig {
     public draggable: boolean = true; // 是否可以拖动
     public readonly?: boolean = false; // 表头是否可以编辑
-    public $leafIndexList = new Array();
-    public $leafIndexList2 = new Array();
+    public $leafIndexListTmp = new Array();
+    public $leafIndexListTmp2 = new Array();
     public side1 = 0;
     public side2 = 0;
     public span1 = 0;

@@ -10,8 +10,8 @@ export class TbodyContainer extends CellContainer {
 
     public initBeforeSetData(paramClone?: any): void {
         super.initBeforeSetData(paramClone);
-        this.config = _.clone(this.$dragTableConfig.TbodyContainerConfig);
-        // _.objectSet(this.config, this.$dragTableConfig.TbodyContainerConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.TbodyContainerConfig);
+        _.objectSet(this.config, config, 'union');
         _.objectSet(paramClone, this.$dragTableConfig.tbodyContainer, 'union');
         this.renderByThead = true;
     }

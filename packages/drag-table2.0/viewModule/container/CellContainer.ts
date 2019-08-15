@@ -161,7 +161,7 @@ export abstract class CellContainer extends BaseContainer implements CellContain
             render: true,
             event: null,
             data: {
-                objectName: '',
+                objectName: 'setWidthOrHeight',
                 object: null
             }
         });

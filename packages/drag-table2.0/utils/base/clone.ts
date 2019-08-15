@@ -1,6 +1,6 @@
 export function baseClone(Obj: any, excludeReg?: RegExp, keepReg?: RegExp, withFunction?: boolean) {
     let buf: any;
-    if (Obj instanceof Array) {
+    if (Array.isArray(Obj)) {
         buf = [];
         Obj.forEach((val, i) => {
             buf[i] = baseClone(val, excludeReg, keepReg);

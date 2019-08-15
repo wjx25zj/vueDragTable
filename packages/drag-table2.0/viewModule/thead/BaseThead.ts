@@ -5,8 +5,10 @@ import { BaseTheadInterface } from '../../interface/viewModule/thead/BaseThead';
 import { BaseTheadConfig } from '../../config/BaseTheadConfig';
 export class BaseThead extends TheadContainer {
     public config: BaseTheadConfig;
-    public $leafIndexList?: any[]; // 叶子节点顺序列表
-    public $leafIndexList2?: any[]; // 叶子节点顺序列表
+    public $leafIndexListTmp?: any[]; // 叶子节点顺序列表
+    public $leafIndexListTmp2?: any[]; // 叶子节点顺序列表
+    public $leafIndexList2?: any[] = []; // 叶子节点顺序列表
+    public $leafIndexList?: any[] = []; // 叶子节点顺序列表
     public dragStartData?: any;
     public $tableHeadTop?: TheadContainer[][] = new Array(); // 用于显示的上侧表头 直接用于左表头的渲染
     public $tableHeadLeft?: TheadContainer[][] = new Array(); // 用于显示的左侧表头 直接用于左表头的渲染
@@ -22,7 +24,8 @@ export class BaseThead extends TheadContainer {
         this.cell = null;
         this.dragStartData = null;
         this.$rootParent = this;
-        _.objectSet(this.config, this.$dragTableConfig.BaseTheadConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.BaseTheadConfig);
+        _.objectSet(this.config, config, 'union');
         if (this.type === 'top') {
             _.objectSet(paramClone, this.$dragTableConfig.topThead, 'union');
         } else if (this.type === 'left') {
@@ -34,11 +37,11 @@ export class BaseThead extends TheadContainer {
      * resize
      */
     public resize(): void {
-        this.$leafIndexList = [];
-        this.$leafIndexList2 = [];
+        this.$leafIndexListTmp = [];
+        this.$leafIndexListTmp2 = [];
         super.resize();
         let maxLayerContainer: TheadContainer;
-        this.$leafIndexList.forEach((th: TheadContainer) => {
+        this.$leafIndexListTmp.forEach((th: TheadContainer) => {
             if (maxLayerContainer) {
                 maxLayerContainer = (th.theadPosition.length > maxLayerContainer.theadPosition.length && th.span2 !== 0) ? th : maxLayerContainer;
             } else {
@@ -49,7 +52,7 @@ export class BaseThead extends TheadContainer {
         if (maxLayerContainer) {
             do {
                 if (maxLayerContainer.span2 == 1) {
-                    this.$leafIndexList2.splice(0, 0, maxLayerContainer);
+                    this.$leafIndexListTmp2.splice(0, 0, maxLayerContainer);
                 }
                 if (maxLayerContainer.$parent) {
                     maxLayerContainer = maxLayerContainer.$parent;
@@ -77,6 +80,8 @@ export class BaseThead extends TheadContainer {
             p.rowNum = p.rowNum;
             p.colNum = p.colNum + child.side1;
         });
+        this.$leafIndexList = this.$leafIndexListTmp;
+        this.$leafIndexList2 = this.$leafIndexListTmp2;
         return this.$tableHeadTop;
     }
     // 转换成纵表
@@ -96,6 +101,8 @@ export class BaseThead extends TheadContainer {
                 index += child.side1;
             });
         }
+        this.$leafIndexList = this.$leafIndexListTmp;
+        this.$leafIndexList2 = this.$leafIndexListTmp2;
         return this.$tableHeadLeft;
     }
 

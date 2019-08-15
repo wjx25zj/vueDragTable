@@ -19,7 +19,9 @@ export class BaseTbody extends TbodyContainer {
 
     public initBeforeSetData(paramClone?: any): void {
         super.initBeforeSetData(paramClone);
-        _.objectSet(this.config, this.$dragTableConfig.BaseTbodyConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.BaseTbodyConfig);
+        _.objectSet(this.config, config, 'union');
+
         _.objectSet(paramClone, this.$dragTableConfig.baseTbody, 'union');
     }
     /**
@@ -237,6 +239,7 @@ export class BaseTbody extends TbodyContainer {
         const leftIndexList = this.leftIndexList;
         const topIndexList = this.topIndexList;
         this.resize();
+        const waitForRender = [];
         leftIndexList.forEach((leftIndexTh: IndexContainerInterface) => {
             topIndexList.forEach((topIndexTh: IndexContainerInterface) => {
                 const keyString = leftIndexTh.renderId + this.separator + topIndexTh.renderId;
@@ -305,9 +308,13 @@ export class BaseTbody extends TbodyContainer {
                 container.style.height = leftIndexTh.style.height;
                 container.widthSelfNum = topIndexTh.widthNum;
                 container.heightSelfNum = topIndexTh.heightNum;
-                container.cell.render();
+                waitForRender.push(container);
+
             });
-            // this.bodyData[leftIndexTh.renderId] = tmpTr;
+
+        });
+        waitForRender.forEach(container => {
+            container.cell.render();
         });
     }
 

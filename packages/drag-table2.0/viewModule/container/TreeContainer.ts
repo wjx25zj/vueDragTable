@@ -23,7 +23,8 @@ export class TreeContainer extends SelfContainer {
     public initBeforeSetData(paramClone?: any) {
         super.initBeforeSetData(paramClone);
         this.$parent = paramClone.$parent;
-        _.objectSet(this.config, this.$dragTableConfig.TreeContainerConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.TreeContainerConfig);
+        _.objectSet(this.config, config, 'union');
         _.objectSet(paramClone, this.$dragTableConfig.treeContainer, 'union');
     }
 
@@ -101,7 +102,7 @@ export class TreeContainer extends SelfContainer {
     /**
      * 自动递归计算容器长宽，以及span、theadPosition等属性值
      *
-     * @param {any[]} [$leafIndexList]
+     * @param {any[]} [$leafIndexListTmp]
      * @memberof TheadContainer
      */
     public resize(): void {
@@ -275,6 +276,7 @@ export class TreeContainer extends SelfContainer {
                 insertIndex += delCount;
                 this.children[i] = addContainer;
                 addContainer.addByTree = true;
+                addContainer.$treeParent = this;
             });
         }
         this.resize();

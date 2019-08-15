@@ -69,7 +69,7 @@
 
         <tr
           v-for='(th, i) in myTable.$rowNumber'
-          :key='th.id'
+          :key='i'
         >
           <!-- TopThead -->
           <template v-if="i < myTable.$tableHeadTop.length">
@@ -104,7 +104,7 @@
             <!-- topTh -->
             <th
               v-for='(th, j) in myTable.$tableHeadTop[i]'
-              :key='th.id'
+              :key='j'
               :colspan="th.span1"
               :rowspan="th.span2"
               v-bind:style="[th.style]"

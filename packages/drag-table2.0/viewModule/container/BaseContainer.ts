@@ -59,8 +59,9 @@ export abstract class BaseContainer {
         this.$positionManager = PositionManager.getInstance(this.$groupId);
         this.$dragTableConfig = DragTableConfig.getInstance(this.$groupId);
         // dragtable设置注入
-        this.config = _.clone(this.$dragTableConfig.BaseContainerConfig);
-        // _.objectSet(this.config, this.$dragTableConfig.BaseContainerConfig, 'union');
+        // this.config = _.clone(this.$dragTableConfig.BaseContainerConfig);
+        const config = _.clone(this.$dragTableConfig.BaseContainerConfig);
+        _.objectSet(this.config, config, 'union');
         _.objectSet(paramClone, this.$dragTableConfig.baseContainer, 'union');
         this.type = paramClone.type || 'top';
     }

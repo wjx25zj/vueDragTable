@@ -17,7 +17,8 @@ export class BaseTbody extends TbodyContainer {
 
     public initBeforeSetData(paramClone?: any): void {
         super.initBeforeSetData(paramClone);
-        _.objectSet(this.config, this.$dragTableConfig.BaseTbodyConfig, 'union');
+        const config = _.clone(this.$dragTableConfig.BaseTbodyConfig);
+        _.objectSet(this.config, config, 'union');
         _.objectSet(paramClone, this.$dragTableConfig.baseTbody, 'union');
     }
     /**
