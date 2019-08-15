@@ -1,0 +1,45 @@
+{
+  "defaultSeverity": "warning",
+  "extends": [
+    "tslint:recommended"
+  ],
+  "linterOptions": {
+    "exclude": [
+      "node_modules/**"
+    ]
+  },
+  "rules": {
+    "only-arrow-functions": false,
+    "no-bitwise": false,
+    "variable-name": [false, "ban-keywords", "check-format", "allow-leading-underscore"],
+    "eofline": false,
+    "quotemark": [false, "single"],
+    "indent": [true, "spaces", 2],
+    "interface-name": false,
+    "ordered-imports": false,
+    "object-literal-sort-keys": false,
+    "no-consecutive-blank-lines": false,
+    "no-console":false,
+    "max-line-length":[false,240],
+    "no-empty": false,
+    "strict-type-predicates": false,
+    "prefer-for-of": false,
+    "triple-equals": false,
+    "no-unused-expression": false,
+    "whitespace": [false, "check-branch", "check-operator", "check-typecast"],
+    "arrow-parens": false,
+    "no-trailing-whitespace": false,
+    "trailing-comma": [
+      false,
+      {
+        "multiline": {
+          "objects": "always",
+          "arrays": "always",
+          "functions": "never",
+          "typeLiterals": "ignore"
+        },
+        "esSpecCompliant": true
+      }
+    ]
+  }
+}
